@@ -1326,9 +1326,10 @@ function renderAll() {
 
 function renderStats() {
   if (!products.length) return;
+  // 総在庫数ベースで判定（管理者画面と一致）
   document.getElementById('s-total').textContent = products.length;
-  document.getElementById('s-ok').textContent = products.filter(p => remain(p) > 0).length;
-  document.getElementById('s-sold').textContent = products.filter(p => remain(p) <= 0).length;
+  document.getElementById('s-ok').textContent = products.filter(p => (Number(p.stock) || 0) > 0).length;
+  document.getElementById('s-sold').textContent = products.filter(p => (Number(p.stock) || 0) <= 0).length;
 }
 
 function renderFilters() {
@@ -1350,10 +1351,16 @@ function renderShop() {
   const hdr = document.getElementById('shop-header-count');
   if (hdr) hdr.textContent = list.length + '件';
   document.getElementById('product-grid').innerHTML = list.map((p, i) => {
-    const r = remain(p), st = stockState(p);
-    const badge = r <= 0
+    // 表示用：総在庫数（管理者画面と一致させる）
+    const totalStock = Number(p.stock) || 0;
+    const dispState  = totalStock <= 0 ? 'zero' : totalStock <= 5 ? 'low' : 'ok';
+    const dispPct    = totalStock === 0 ? 0 : 100; // 総在庫表示なので100%固定（バーは在庫あり/なしの視覚表現のみ）
+    // 購入可否判定：残数（remain）が0ならカート追加不可
+    const canBuy = remain(p) > 0;
+
+    const badge = totalStock <= 0
       ? '<div class="pbadge sold-badge">SOLD OUT</div>'
-      : r <= 5 ? '<div class="pbadge low-badge">残りわずか</div>' : '';
+      : totalStock <= 5 ? '<div class="pbadge low-badge">残りわずか</div>' : '';
     const janHtml = p.jan
       ? '<div class="pjan">JAN <strong>' + p.jan + '</strong></div>' : '';
     const typeBadge = p.type === '予約品'
@@ -1374,8 +1381,9 @@ function renderShop() {
         })(p.delivery) : '';
     const urlHtml = p.url
       ? '<div class="purl"><a href="' + p.url + '" target="_blank" rel="noopener">🔗 商品ページを見る</a></div>' : '';
-    const stockLabel = r <= 0 ? '在庫切れ' : r <= 5 ? '残り' + r + '個' : r + '個';
-    return '<div class="pcard ' + (r <= 0 ? 'sold' : '') + '" style="animation-delay:' + (i * .05) + 's">'
+    // 在庫表示：総在庫数（「在庫○個」「在庫切れ」のみ、残り○個という表記は廃止）
+    const stockLabel = totalStock <= 0 ? '在庫切れ' : '在庫 ' + totalStock + '個';
+    return '<div class="pcard ' + (!canBuy ? 'sold' : '') + '" style="animation-delay:' + (i * .05) + 's">'
       + badge
       + typeBadge
       + '<div class="pcard-header ' + catClass(p.category) + '"></div>'
@@ -1387,11 +1395,11 @@ function renderShop() {
       + urlHtml
       + '<div class="pprice-row"><span class="pprice">¥' + Number(p.price).toLocaleString() + '</span><span class="pprice-unit">/ 個</span></div>'
       + '<div class="bar-wrap">'
-      + '<div class="bar-top"><span class="bl">在庫状況</span><span class="bv ' + st + '">' + stockLabel + '</span></div>'
-      + '<div class="bar"><div class="bf ' + st + '" style="width:' + pct(p) + '%"></div></div>'
+      + '<div class="bar-top"><span class="bl">在庫状況</span><span class="bv ' + dispState + '">' + stockLabel + '</span></div>'
+      + '<div class="bar"><div class="bf ' + dispState + '" style="width:' + dispPct + '%"></div></div>'
       + '</div>'
-      + '<button class="obtn ' + (r <= 0 ? 'sold-btn' : '') + '" onclick="openCartAddModal(' + p.id + ')" ' + (r <= 0 ? 'disabled' : '') + '>'
-      + (r <= 0 ? '在庫切れ' : '🛒 カートに追加')
+      + '<button class="obtn ' + (!canBuy ? 'sold-btn' : '') + '" onclick="openCartAddModal(' + p.id + ')" ' + (!canBuy ? 'disabled' : '') + '>'
+      + (!canBuy ? '在庫切れ' : '🛒 カートに追加')
       + '</button>'
       + '</div></div>';
   }).join('') || '<div style="grid-column:1/-1;text-align:center;padding:48px;color:#AAA;font-size:14px">商品がありません</div>';
