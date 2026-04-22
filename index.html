@@ -741,7 +741,7 @@ main{max-width:1060px;margin:0 auto;padding:26px 18px;}
         <table class="tbl">
           <thead><tr>
             <th>商品名</th><th>カテゴリ</th><th>単価</th>
-            <th>在庫数</th><th>予約済</th><th>残数</th><th>状態</th>
+            <th>総在庫数</th><th>予約数</th><th>予約件数</th><th>状態</th>
             <th>JANコード</th><th>参考URL</th>
             <th style="min-width:200px">操作</th>
           </tr></thead>
@@ -1315,9 +1315,11 @@ async function loadProducts() {
 }
 
 // ── ヘルパー ──────────────────────────────────────
-function remain(p) { return Math.max(0, p.remain !== undefined ? Number(p.remain) : Number(p.stock)); }
+// 新仕様: stockは独立した「総在庫数」。購入で直接減算、手動で上書き。
+// 予約済数(reserved)・予約件数(orderCount)は参考値で在庫に影響しない。
+function remain(p) { return Math.max(0, Number(p.stock) || 0); }
 function stockState(p) { const r = remain(p); return r <= 0 ? 'zero' : r <= 5 ? 'low' : 'ok'; }
-function pct(p) { return p.stock === 0 ? 0 : Math.round((remain(p) / p.stock) * 100); }
+function pct(p) { return (Number(p.stock) || 0) > 0 ? 100 : 0; }
 
 // ── RENDER ALL ────────────────────────────────────
 function renderAll() {
@@ -1407,9 +1409,12 @@ function renderShop() {
 
 function renderInventory() {
   document.getElementById('inv-tbody').innerHTML = products.map(p => {
-    const r = remain(p), st = stockState(p);
+    // 状態判定は総在庫数ベース（stock独立値）
+    const stockVal = Number(p.stock) || 0;
+    const st = stockVal <= 0 ? 'zero' : stockVal <= 5 ? 'low' : 'ok';
     const tagClass = st === 'ok' ? 'tag-ok' : st === 'low' ? 'tag-low' : 'tag-zero';
     const tagLabel = st === 'ok' ? '在庫あり' : st === 'low' ? '残りわずか' : '在庫切れ';
+    const orderCount = Number(p.orderCount || 0); // 予約件数（動的集計、GAS側から返る）
     const urlCell = p.url
       ? `<a href="${p.url}" target="_blank" rel="noopener" style="color:var(--info);font-size:11px;text-decoration:none">🔗 リンク</a>`
       : '<span style="color:var(--muted);font-size:11px">—</span>';
@@ -1421,11 +1426,11 @@ function renderInventory() {
         <div style="display:flex;align-items:center;gap:6px">
           <input type="number" id="as-${p.id}" value="${p.stock}" min="0" style="width:65px">
           <button class="btn btn-a" onclick="updateStock(${p.id}, false)">更新</button>
-          <button class="btn" style="font-size:11px;background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:6px;padding:4px 8px;cursor:pointer;white-space:nowrap" onclick="updateStock(${p.id}, true)" title="在庫を増やし予約済数を0にリセット（再販売時）">🔄 再販売</button>
+          <button class="btn" style="font-size:11px;background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:6px;padding:4px 8px;cursor:pointer;white-space:nowrap" onclick="updateStock(${p.id}, true)" title="在庫を変更し予約数を0にリセット（参考値リセット）">🔄 予約リセット</button>
         </div>
       </td>
-      <td style="color:var(--warn)">${p.reserved}</td>
-      <td style="font-family:'BIZ UDPGothic',sans-serif;font-weight:700;color:${r <= 0 ? 'var(--danger)' : r <= 5 ? 'var(--warn)' : 'var(--success)'}">${r}</td>
+      <td style="color:var(--warn);font-weight:700" title="予約個数の累計（表示用・在庫に影響なし）">${p.reserved || 0}</td>
+      <td style="font-family:'BIZ UDPGothic',sans-serif;font-weight:700;color:var(--info)" title="予約件数（注文ログから集計・在庫に影響なし）">${orderCount}</td>
       <td><span class="tag ${tagClass}">${tagLabel}</span></td>
       <td style="font-size:12px;font-family:'BIZ UDPGothic',monospace;color:var(--text)">${p.jan || '<span style="color:var(--muted)">—</span>'}</td>
       <td>${urlCell}</td>
@@ -1751,9 +1756,11 @@ async function submitCartOrder() {
       cart.forEach(item => {
         const p = products.find(x => x.id == item.id);
         if (p) {
-          // 予約品・在庫品ともに予約済+・残数-
-          p.reserved = Number(p.reserved) + item.qty;
-          p.remain   = Math.max(0, Number(p.remain) - item.qty);
+          // 新仕様: stock（総在庫数）を直接減算、reserved（表示用）も加算
+          p.stock    = Math.max(0, Number(p.stock) - item.qty);
+          p.remain   = p.stock; // 互換用
+          p.reserved = (Number(p.reserved) || 0) + item.qty;
+          p.orderCount = (Number(p.orderCount) || 0) + 1; // 注文件数も即時反映
         }
         const dt = new Date().toLocaleDateString('ja-JP') + ' ' + new Date().toTimeString().slice(0,5);
         orderLog.push({ datetime: dt, name: shipName, productName: item.name, qty: item.qty, type: '予約購入', total: item.price * item.qty });
@@ -1981,19 +1988,19 @@ async function confirmDelete() {
 async function updateStock(id, resetReserved = false) {
   const v = parseInt(document.getElementById('as-' + id).value);
   if (isNaN(v) || v < 0) return;
-  if (resetReserved && !confirm('予約済数をリセットして在庫を更新します。\n再販売を開始してよろしいですか？')) return;
+  if (resetReserved && !confirm('総在庫数を「' + v + '」に更新し、予約数（参考値）を0にリセットします。\n続行しますか？')) return;
   try {
     const r = await gasPost({ action:'updateStock', productId:id, stock:v, resetReserved });
     if (r?.error) throw new Error(r.error);
-    // GASが返した確定値でローカルを更新
+    // GASが返した確定値でローカルを更新（stockは独立値）
     const p = products.find(x => x.id == id);
     if (p) {
       p.stock    = Number(r.stock ?? v);
-      p.reserved = Number(r.reserved ?? 0);
-      p.remain   = Number(r.remain ?? v);
+      p.reserved = Number(r.reserved ?? p.reserved ?? 0);
+      p.remain   = p.stock; // 互換用
     }
     renderAll();
-    showToast(resetReserved ? '再販売開始：在庫・予約済数を更新しました' : '在庫数を更新しました');
+    showToast(resetReserved ? '総在庫数・予約数を更新しました' : '総在庫数を更新しました');
     // GASから最新データを再取得（renderAllの後に非同期で実行）
     loadProducts();
   } catch (e) { showToast('更新失敗: ' + e.message, true); }
