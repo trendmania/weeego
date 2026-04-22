@@ -720,6 +720,7 @@ main{max-width:1060px;margin:0 auto;padding:26px 18px;}
       <button class="anav" onclick="switchAdmin('add',this)"><span class="aicon">➕</span>商品追加</button>
       <button class="anav" onclick="switchAdmin('customers',this)"><span class="aicon">👤</span>顧客情報</button>
       <button class="anav" onclick="switchAdmin('orders',this)"><span class="aicon">📋</span>注文ログ</button>
+      <button class="anav" onclick="switchAdmin('b2',this)"><span class="aicon">🚚</span>B2発送</button>
       <button class="anav" onclick="switchAdmin('settings',this)"><span class="aicon">⚙️</span>設定</button>
       <button class="anav" onclick="switchAdmin('members',this)"><span class="aicon">👥</span>メンバー</button>
     </div>
@@ -896,6 +897,87 @@ main{max-width:1060px;margin:0 auto;padding:26px 18px;}
         <h3>カテゴリ管理</h3>
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px">現在登録されているカテゴリ</div>
         <div id="cat-list" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+
+    <!-- B2発送 -->
+    <div class="asub" id="asub-b2">
+      <div class="sec">🚚 ヤマトB2発送管理
+        <button class="btn btn-i" onclick="loadB2Orders()" style="font-size:11px">↻ 最新データを取得</button>
+      </div>
+
+      <!-- ステップ説明 -->
+      <div class="info-box">
+        <strong>📦 発送ワークフロー</strong><br>
+        <span style="color:#2563EB;font-weight:700">①</span> 注文を選択 →
+        <span style="color:#2563EB;font-weight:700">②</span> B2用CSVをダウンロード →
+        <span style="color:#2563EB;font-weight:700">③</span> B2クラウドで送り状作成 →
+        <span style="color:#2563EB;font-weight:700">④</span> B2出力CSVを取り込み（or 手入力） →
+        <span style="color:#2563EB;font-weight:700">⑤</span> 発送メール送信
+      </div>
+
+      <!-- フィルタ -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px">
+        <label style="font-size:12px;color:var(--muted);font-weight:700">絞り込み:</label>
+        <select id="b2-filter-status" onchange="renderB2Orders()" style="padding:6px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:12px">
+          <option value="all">すべての注文</option>
+          <option value="invoiced" selected>請求書発行済のみ</option>
+          <option value="needTracking">伝票番号未入力のみ</option>
+          <option value="readyToSend">発送メール未送信のみ</option>
+          <option value="notshipped">発送済を除外</option>
+        </select>
+        <input type="text" id="b2-filter-search" onkeyup="renderB2Orders()" placeholder="氏名・注文番号で検索" style="padding:6px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:12px;width:220px">
+        <span id="b2-count" style="font-size:11px;color:var(--muted);margin-left:auto"></span>
+      </div>
+
+      <!-- 操作バー（常時表示） -->
+      <div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:12px;padding:14px 16px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <span style="font-size:13px;font-weight:700;color:#0369A1">📦 <span id="b2-selected-count">0</span>件を選択中</span>
+
+          <!-- B2用CSV -->
+          <button class="btn btn-i" onclick="downloadB2Csv()" style="font-size:12px;padding:8px 14px" title="選択した注文のB2取込用CSVをダウンロード">
+            📥 B2取込用CSVダウンロード
+          </button>
+
+          <!-- B2出力CSVアップロード -->
+          <label class="btn btn-w" style="font-size:12px;padding:8px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;border-radius:7px;margin:0" title="B2クラウドからエクスポートしたCSVをアップロードして伝票番号を自動反映">
+            📤 B2出力CSVを取込<input type="file" accept=".csv,.txt" onchange="importB2Csv(event)" style="display:none">
+          </label>
+
+          <!-- 伝票番号保存 -->
+          <button class="btn btn-a" onclick="saveTrackingNumbers()" style="font-size:12px;padding:8px 14px" title="入力された伝票番号をスプレッドシートに保存">
+            💾 伝票番号を保存
+          </button>
+
+          <!-- 発送メール送信 -->
+          <button class="btn btn-primary" onclick="sendShipmentEmails()" style="font-size:13px;padding:8px 16px" title="選択した注文に発送完了メールを送信">
+            📧 発送メール送信
+          </button>
+
+          <button class="btn btn-cancel" onclick="clearB2Selection()" style="font-size:12px;padding:8px 14px">クリア</button>
+        </div>
+        <div style="font-size:11px;color:#0369A1;line-height:1.8">
+          💡 B2クラウドの「送り状データ（伝票）作成完了」画面から、ダウンロードした伝票番号入りCSVをここで取り込めます（「お客様管理番号」列の注文番号で自動マッチング）。
+        </div>
+      </div>
+
+      <!-- 一覧 -->
+      <div style="overflow-x:auto">
+        <table class="tbl" id="b2-tbl">
+          <thead><tr>
+            <th style="width:40px;text-align:center">
+              <input type="checkbox" id="b2-check-all" onchange="toggleB2CheckAll(this)" style="cursor:pointer">
+            </th>
+            <th>注文番号</th>
+            <th>配送先氏名</th>
+            <th>都道府県</th>
+            <th>品名</th>
+            <th style="min-width:160px">伝票番号</th>
+            <th>状態</th>
+          </tr></thead>
+          <tbody id="b2-tbody"><tr><td colspan="7" class="no-data">「最新データを取得」をクリックしてください</td></tr></tbody>
+        </table>
       </div>
     </div>
 
@@ -1409,14 +1491,14 @@ function openCartAddModal(id) {
   const p = products.find(x => x.id == id);
   if (!p) return;
   currentPid = id;
-  modalMaxQty = (p.type === '予約品') ? 99 : remain(p);
+  modalMaxQty = remain(p);
   modalQty = 1;
   currentOrderType = 'order'; // 予約購入で固定
   document.getElementById('m-cat').textContent   = p.category;
   document.getElementById('m-name').textContent  = p.name;
   document.getElementById('m-jan').textContent   = p.jan ? '(' + p.jan + ')' : '';
   document.getElementById('m-price').textContent = '¥' + Number(p.price).toLocaleString();
-  document.getElementById('m-remain-note').textContent = (p.type === '予約品') ? '予約品' : '残' + modalMaxQty + '個';
+  document.getElementById('m-remain-note').textContent = '残' + modalMaxQty + '個';
 
   updateModalQtyDisplay();
   openOverlay('cart-add-overlay');
@@ -1430,8 +1512,8 @@ function setOrderType(type) {
 
 function changeModalQty(delta) {
   const p = products.find(x => x.id == currentPid);
-  // 予約品は在庫上限なし、在庫品は残数が上限
-  const max = (p && p.type === '予約品') ? 99 : remain(p);
+  // 予約品・在庫品ともに残数が上限
+  const max = remain(p);
   modalQty = Math.max(1, Math.min(max, modalQty + delta));
   updateModalQtyDisplay();
 }
@@ -1449,7 +1531,7 @@ function addToCart() {
   currentOrderType = 'order';
   const existing = cart.find(i => i.id === p.id && i.type === currentOrderType);
   if (existing) {
-    const max = (p.type === '予約品') ? 99 : remain(p);
+    const max = remain(p);
     existing.qty = Math.min(max, existing.qty + modalQty);
   } else {
     cart.push({ id: p.id, name: p.name, category: p.category, jan: p.jan||'',
@@ -1504,7 +1586,8 @@ function renderCart() {
 function changeCartQty(idx, delta) {
   const item = cart[idx];
   const p = products.find(x => x.id == item.id);
-  const max = (p && p.type === '予約品') ? 99 : (p ? remain(p) : 1);
+  // 予約品・在庫品ともに残数が上限
+  const max = p ? remain(p) : 1;
   item.qty = Math.max(1, Math.min(max, item.qty + delta));
   renderCart();
   updateCartBadge();
@@ -1653,7 +1736,8 @@ async function submitCartOrder() {
     else {
       cart.forEach(item => {
         const p = products.find(x => x.id == item.id);
-        if (p && p.type === '在庫品') {
+        if (p) {
+          // 予約品・在庫品ともに予約済+・残数-
           p.reserved = Number(p.reserved) + item.qty;
           p.remain   = Math.max(0, Number(p.remain) - item.qty);
         }
@@ -2542,6 +2626,412 @@ async function loadInvoiceList() {
           '<td><a href="' + inv.pdfUrl + '" target="_blank" style="color:var(--info);font-size:12px;text-decoration:none">📄 PDF</a></td></tr>'
         ).join('');
   } catch(e) { showToast('ログ取得失敗: ' + e.message, true); }
+}
+
+// =========================================================
+// B2発送管理機能
+// =========================================================
+let b2Orders = [];              // 注文一覧
+let b2Selection = new Set();    // 選択中の注文番号
+let b2Tracking = {};            // { orderNo: tracking } 伝票番号マップ
+let b2Shipments = {};           // サーバ側の発送データ（GAS発送管理シートから取得）
+
+async function loadB2Orders() {
+  showToast('注文・発送データを取得中...');
+  try {
+    // 注文一覧
+    const r = await gasGet({ action: 'getOrdersForInvoice' });
+    if (r?.error) throw new Error(r.error);
+
+    // 発送管理データ
+    let shipmentsResp = { shipments: [] };
+    try {
+      shipmentsResp = await gasGet({ action: 'getShipments' });
+    } catch(e) { /* 旧GAS未対応の場合はスキップ */ }
+    b2Shipments = {};
+    (shipmentsResp.shipments || []).forEach(sh => {
+      b2Shipments[sh.orderNo] = sh;
+    });
+
+    // 同一注文番号を1件にまとめる
+    const merged = {};
+    (r.orders || []).forEach(o => {
+      const key = o.orderNo;
+      if (!merged[key]) {
+        merged[key] = {
+          orderNo:      o.orderNo,
+          datetime:     o.datetime,
+          shipName:     o.shipName     || o.name,
+          shipPhone:    o.shipPhone    || o.phone,
+          shipAddress:  o.shipAddress  || o.address,
+          shipBuilding: o.shipBuilding || o.building,
+          items:        [],
+          invoiced:     false,
+        };
+      }
+      merged[key].items.push(...(o.items||[]));
+      if (o.invoiced) merged[key].invoiced = true;
+    });
+    b2Orders = Object.values(merged);
+
+    // 既存の伝票番号をローカルに反映
+    b2Tracking = {};
+    Object.keys(b2Shipments).forEach(no => {
+      if (b2Shipments[no].tracking) b2Tracking[no] = b2Shipments[no].tracking;
+    });
+
+    b2Selection.clear();
+    updateB2SelectBar();
+    renderB2Orders();
+    showToast('取得完了（注文' + b2Orders.length + '件）');
+  } catch(e) { showToast('取得失敗: ' + e.message, true); }
+}
+
+function renderB2Orders() {
+  const tbody = document.getElementById('b2-tbody');
+  const filter = document.getElementById('b2-filter-status').value;
+  const search = (document.getElementById('b2-filter-search').value || '').trim().toLowerCase();
+
+  // フィルタ適用
+  let list = b2Orders.slice();
+  if (filter === 'invoiced')       list = list.filter(o => o.invoiced);
+  if (filter === 'needTracking')   list = list.filter(o => !b2Tracking[o.orderNo]);
+  if (filter === 'readyToSend')    list = list.filter(o => b2Tracking[o.orderNo] && (b2Shipments[o.orderNo]?.status !== '送信済'));
+  if (filter === 'notshipped')     list = list.filter(o => b2Shipments[o.orderNo]?.status !== '送信済');
+  if (search) {
+    list = list.filter(o =>
+      (o.shipName || '').toLowerCase().includes(search) ||
+      (o.orderNo || '').toLowerCase().includes(search)
+    );
+  }
+  // 日時降順
+  list.sort((a, b) => (b.datetime || '').localeCompare(a.datetime || ''));
+
+  document.getElementById('b2-count').textContent = list.length + '件';
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="no-data">該当する注文がありません</td></tr>';
+    const all = document.getElementById('b2-check-all'); if (all) all.checked = false;
+    return;
+  }
+
+  tbody.innerHTML = list.map(o => {
+    const pref = _extractPref(o.shipAddress || '') || '—';
+    const itemSummary = (o.items || []).map(i => i.name + '×' + i.qty).join('、');
+    const isChecked = b2Selection.has(o.orderNo);
+    const tracking = b2Tracking[o.orderNo] || '';
+    const shipStatus = b2Shipments[o.orderNo]?.status || '';
+    const sentAt = b2Shipments[o.orderNo]?.sentAt || '';
+
+    // 状態タグ
+    let statusTag;
+    if (shipStatus === '送信済') {
+      statusTag = '<span class="tag tag-ok">📧 送信済</span><br><span style="font-size:10px;color:var(--muted)">' + sentAt + '</span>';
+    } else if (tracking) {
+      statusTag = '<span class="tag tag-low">伝票入力済</span>';
+    } else if (o.invoiced) {
+      statusTag = '<span class="tag tag-reserve">発送待ち</span>';
+    } else {
+      statusTag = '<span style="background:#F3F4F6;color:#6B7280;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700">請求書未発行</span>';
+    }
+
+    return '<tr' + (shipStatus === '送信済' ? ' style="opacity:.6"' : '') + '>' +
+      '<td style="text-align:center">' +
+        '<input type="checkbox" class="b2-check" data-orderno="' + o.orderNo + '" ' +
+        (isChecked ? 'checked ' : '') +
+        'onchange="toggleB2Select(\'' + o.orderNo + '\', this.checked)" style="cursor:pointer">' +
+      '</td>' +
+      '<td style="font-family:monospace;font-size:11px">' + o.orderNo + '</td>' +
+      '<td style="font-weight:600">' + (o.shipName || '') + '</td>' +
+      '<td style="font-size:12px">' + pref + '</td>' +
+      '<td style="font-size:12px;max-width:260px">' + itemSummary + '</td>' +
+      '<td>' +
+        '<input type="text" class="b2-tracking-input" data-orderno="' + o.orderNo + '" ' +
+        'value="' + tracking.replace(/"/g,'&quot;') + '" ' +
+        'placeholder="例: 1234-5678-9012" ' +
+        'oninput="onTrackingInput(\'' + o.orderNo + '\', this.value)" ' +
+        'style="width:100%;padding:5px 8px;font-size:12px;font-family:monospace;border:1px solid var(--border2);border-radius:6px;background:var(--bg);">' +
+      '</td>' +
+      '<td>' + statusTag + '</td>' +
+    '</tr>';
+  }).join('');
+
+  const allChk = document.getElementById('b2-check-all');
+  if (allChk) {
+    const listOrderNos = list.map(o => o.orderNo);
+    allChk.checked = listOrderNos.length > 0 && listOrderNos.every(n => b2Selection.has(n));
+  }
+}
+
+function onTrackingInput(orderNo, value) {
+  const v = String(value || '').trim();
+  if (v) b2Tracking[orderNo] = v;
+  else delete b2Tracking[orderNo];
+}
+
+function toggleB2Select(orderNo, checked) {
+  if (checked) b2Selection.add(orderNo);
+  else b2Selection.delete(orderNo);
+  updateB2SelectBar();
+}
+
+function toggleB2CheckAll(el) {
+  const checks = document.querySelectorAll('.b2-check');
+  checks.forEach(c => {
+    c.checked = el.checked;
+    const orderNo = c.dataset.orderno;
+    if (el.checked) b2Selection.add(orderNo);
+    else b2Selection.delete(orderNo);
+  });
+  updateB2SelectBar();
+}
+
+function updateB2SelectBar() {
+  document.getElementById('b2-selected-count').textContent = b2Selection.size;
+}
+
+function clearB2Selection() {
+  b2Selection.clear();
+  document.querySelectorAll('.b2-check').forEach(c => c.checked = false);
+  document.getElementById('b2-check-all').checked = false;
+  updateB2SelectBar();
+}
+
+/**
+ * 住所の分解：連結された住所文字列から郵便番号・住所本体・建物名を分離
+ */
+function _parseAddress(raw) {
+  const s = String(raw || '').trim();
+  const zipM = s.match(/〒?(\d{3})-?(\d{4})/);
+  const zip = zipM ? (zipM[1] + '-' + zipM[2]) : '';
+  let rest = s.replace(/〒?\d{3}-?\d{4}[\s　]*/, '').trim();
+  return { zip, address: rest };
+}
+
+/**
+ * B2取込用CSV生成・ダウンロード
+ * 列: お客様管理番号（注文番号）, お届け先電話番号, 郵便番号, 住所, 建物名, 氏名, 品名
+ */
+async function downloadB2Csv() {
+  const selected = b2Orders.filter(o => b2Selection.has(o.orderNo));
+  if (selected.length === 0) { showToast('注文が選択されていません', true); return; }
+
+  const headers = ['お客様管理番号','お届け先電話番号','お届け先郵便番号','お届け先住所','お届け先建物名','お届け先氏名','品名'];
+  const rows = [headers];
+
+  selected.forEach(o => {
+    const parsed = _parseAddress(o.shipAddress || '');
+    const itemNames = (o.items || []).map(i => i.name + '×' + i.qty).join('、');
+    rows.push([
+      o.orderNo,  // お客様管理番号（B2側の列と一致させて、取込時のマッチングに使う）
+      o.shipPhone || '',
+      parsed.zip,
+      parsed.address,
+      o.shipBuilding || '',
+      (o.shipName || '') + ' 様',
+      itemNames
+    ]);
+  });
+
+  const csvText = rows.map(row =>
+    row.map(v => {
+      const s = String(v || '');
+      if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }).join(',')
+  ).join('\r\n');
+
+  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+  const blob = new Blob([bom, csvText], { type: 'text/csv;charset=utf-8' });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const fname = 'B2取込_' + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) +
+    '_' + pad(now.getHours()) + pad(now.getMinutes()) + '.csv';
+  a.href = url;
+  a.download = fname;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  showToast(selected.length + '件のB2取込用CSVをダウンロードしました');
+}
+
+/**
+ * B2出力CSVを取り込んで伝票番号を自動反映
+ * B2クラウドの送り状作成後にエクスポートされるCSVには「お客様管理番号」（注文番号）
+ * と「お問合せ送り状NO」（伝票番号）の列が含まれる。
+ */
+function importB2Csv(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const text = _decodeB2Csv(e.target.result);
+      const result = _parseB2ImportCsv(text);
+      if (result.matched === 0) {
+        showToast('伝票番号を読み取れませんでした。CSVの列構成をご確認ください', true);
+      } else {
+        renderB2Orders();
+        showToast('✅ ' + result.matched + '件の伝票番号を取り込みました' +
+          (result.unmatched > 0 ? '（' + result.unmatched + '件は注文番号が一致せずスキップ）' : ''));
+      }
+    } catch(err) {
+      showToast('CSV読み込み失敗: ' + err.message, true);
+    }
+    event.target.value = ''; // 同じファイルを再度読み込めるようにリセット
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/**
+ * Shift_JIS / UTF-8 を自動判定してデコード
+ */
+function _decodeB2Csv(buffer) {
+  const bytes = new Uint8Array(buffer);
+  // UTF-8 BOM判定
+  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+    return new TextDecoder('utf-8').decode(bytes.subarray(3));
+  }
+  // 先頭を試しにUTF-8でデコードし、文字化けっぽければShift_JISを試す
+  try {
+    const utf8Text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return utf8Text;
+  } catch(e) {
+    // Shift_JISへフォールバック
+    return new TextDecoder('shift_jis').decode(bytes);
+  }
+}
+
+/**
+ * B2出力CSVをパースして b2Tracking に反映
+ * @returns {{matched:number, unmatched:number}}
+ */
+function _parseB2ImportCsv(text) {
+  // 簡易CSVパース（B2出力は複雑なエスケープが無いため）
+  const lines = text.split(/\r\n|\n|\r/).filter(l => l.trim());
+  if (lines.length < 2) throw new Error('CSVが空です');
+
+  // ヘッダー行から「お客様管理番号」と「送り状No」の列位置を探す
+  const parseLine = (line) => {
+    const result = [];
+    let cur = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQuote) {
+        if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+        else if (c === '"') inQuote = false;
+        else cur += c;
+      } else {
+        if (c === '"') inQuote = true;
+        else if (c === ',') { result.push(cur); cur = ''; }
+        else cur += c;
+      }
+    }
+    result.push(cur);
+    return result;
+  };
+
+  const headers = parseLine(lines[0]).map(h => h.trim());
+  let mgmtIdx = -1, trackIdx = -1;
+  headers.forEach((h, i) => {
+    const lower = h.toLowerCase();
+    // お客様管理番号の列
+    if (h.indexOf('お客様管理番号') >= 0 || lower === 'customer_code' || lower === 'management_no') mgmtIdx = i;
+    // 伝票番号の列（送り状NO、お問合せ伝票NO等）
+    if (h.indexOf('送り状') >= 0 || h.indexOf('伝票') >= 0 || lower.indexOf('tracking') >= 0) trackIdx = i;
+  });
+
+  if (mgmtIdx < 0) throw new Error('「お客様管理番号」列が見つかりません');
+  if (trackIdx < 0) throw new Error('「送り状NO」または「伝票番号」列が見つかりません');
+
+  let matched = 0, unmatched = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseLine(lines[i]);
+    const orderNo = String(cols[mgmtIdx] || '').trim();
+    const tracking = String(cols[trackIdx] || '').replace(/[\s\-ー－]/g, '').trim();
+    if (!orderNo || !tracking) continue;
+    // b2Ordersに存在する注文かチェック
+    const found = b2Orders.find(o => o.orderNo === orderNo);
+    if (found) {
+      b2Tracking[orderNo] = tracking;
+      matched++;
+    } else {
+      unmatched++;
+    }
+  }
+
+  return { matched, unmatched };
+}
+
+/**
+ * 入力した伝票番号をGASに保存
+ */
+async function saveTrackingNumbers() {
+  const items = Object.keys(b2Tracking)
+    .filter(no => b2Tracking[no])
+    .map(no => ({ orderNo: no, tracking: b2Tracking[no] }));
+  if (items.length === 0) { showToast('保存する伝票番号がありません', true); return; }
+
+  try {
+    const r = await gasPost({ action: 'saveTracking', items });
+    if (r?.error) throw new Error(r.error);
+    showToast('✅ ' + (r.inserted + r.updated) + '件の伝票番号を保存しました');
+    // 発送管理データを再取得
+    await loadB2Orders();
+  } catch(e) { showToast('保存失敗: ' + e.message, true); }
+}
+
+/**
+ * 発送完了メール送信
+ */
+async function sendShipmentEmails() {
+  const selected = b2Orders.filter(o => b2Selection.has(o.orderNo));
+  if (selected.length === 0) { showToast('注文が選択されていません', true); return; }
+
+  // 伝票番号が入力されていないものを除外
+  const readyList = selected.filter(o => b2Tracking[o.orderNo]);
+  const noTrack = selected.length - readyList.length;
+
+  if (readyList.length === 0) {
+    showToast('選択した注文に伝票番号が入力されていません', true); return;
+  }
+
+  if (!confirm(readyList.length + '件の注文に発送完了メールを送信します。\n' +
+    (noTrack > 0 ? '（' + noTrack + '件は伝票番号未入力のためスキップ）\n' : '') +
+    'よろしいですか？')) return;
+
+  showToast('発送メールを送信中...');
+  try {
+    // まず伝票番号をGASに保存
+    const saveRes = await gasPost({
+      action: 'saveTracking',
+      items: readyList.map(o => ({ orderNo: o.orderNo, tracking: b2Tracking[o.orderNo] }))
+    });
+    if (saveRes?.error) throw new Error(saveRes.error);
+
+    // メール送信
+    const r = await gasPost({
+      action: 'sendShipmentEmails',
+      orderNos: readyList.map(o => o.orderNo)
+    });
+    if (r?.error) throw new Error(r.error);
+
+    let msg = '✅ ' + r.sent + '件の発送メールを送信しました';
+    if (r.skipped > 0) msg += '（' + r.skipped + '件失敗）';
+    showToast(msg, r.skipped > 0);
+    if (r.errors && r.errors.length > 0) {
+      console.error('送信エラー:', r.errors);
+    }
+
+    // 再取得
+    await loadB2Orders();
+  } catch(e) { showToast('送信失敗: ' + e.message, true); }
 }
 </script>
 
