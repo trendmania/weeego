@@ -404,6 +404,8 @@ main{max-width:1060px;margin:0 auto;padding:26px 18px;}
     <div class="gate-logo">Weee<span>GO</span></div>
     <div class="gate-sub">WEGO会員様専用サイトです。パスワードを入力してください。</div>
     <input class="gate-input" type="password" id="gate-pw" placeholder="••••••••"
+      autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+      inputmode="text"
       onkeydown="if(event.key==='Enter')checkGate()">
     <div class="gate-error" id="gate-error">パスワードが正しくありません</div>
     <button class="gate-btn" id="gate-btn" onclick="checkGate()">入場する →</button>
@@ -1124,8 +1126,21 @@ main{max-width:1060px;margin:0 auto;padding:26px 18px;}
 const GATE_KEY = 'weeego_site_authed';
 let gateMemberName = '';
 
+// 入力値の正規化：全角英数字→半角、前後の空白・不可視文字を除去
+function _normalizePw(s) {
+  if (!s) return '';
+  // 全角英数字（！-～）→ 半角（!-~）
+  let v = String(s).replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+  // 全角スペース→半角スペース → 全体の空白を除去
+  v = v.replace(/\u3000/g, ' ');
+  // 前後空白 + ゼロ幅文字 + タブ除去
+  v = v.replace(/^[\s\u200B-\u200D\uFEFF\t]+|[\s\u200B-\u200D\uFEFF\t]+$/g, '');
+  return v;
+}
+
 async function checkGate() {
-  const pw  = document.getElementById('gate-pw').value.trim();
+  const raw = document.getElementById('gate-pw').value;
+  const pw  = _normalizePw(raw);
   const err = document.getElementById('gate-error');
   const btn = document.getElementById('gate-btn');
   if (!pw) return;
