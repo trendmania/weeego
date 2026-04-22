@@ -2379,10 +2379,12 @@ async function submitInvoice() {
 }
 
 /**
- * 商品ごとに個別発行：注文内の各商品に対して1枚ずつ請求書を発行
- * 送料は新ルール（宛先×個口数）で計算。個口数は全請求書で同じ値を使用。
+ * 「商品ごと発行」ボタンクリック時：商品別個口設定モーダルを開く
+ * 実際の発行処理は confirmSplitInvoices() で実行する
  */
-async function submitInvoicePerItem() {
+let _splitPkgs = []; // 商品ごとの個口数（各商品に対応）
+
+function submitInvoicePerItem() {
   if (!_invOrder) return;
   const items = _invOrder.items || [];
   const rowIndices = _invOrder.rowIndices || [];
@@ -2392,30 +2394,106 @@ async function submitInvoicePerItem() {
   if (items.length !== rowIndices.length) {
     showToast('内部エラー：注文行と商品数が一致しません', true); return;
   }
+  // 住所チェック（早期エラー）
+  const testFee = calcShippingClient(_invOrder.address || '', 1);
+  if (testFee === null) {
+    showToast('住所から都道府県を特定できません', true); return;
+  }
+  // 個口数を初期化（メインモーダルの個口数を各商品のデフォルト値として使う）
+  _splitPkgs = items.map(() => packages.length);
+  renderSplitModal();
+  openOverlay('split-overlay');
+}
 
-  // 送料（新ルール：宛先×個口数）
-  const shippingEach = calcShippingClient(_invOrder.address || '', packages.length);
-  if (shippingEach === null) {
+/**
+ * 商品別個口設定モーダルの描画
+ */
+function renderSplitModal() {
+  const items = _invOrder?.items || [];
+  const perPkg = calcShippingClient(_invOrder.address || '', 1);
+  const pref = _extractPref(_invOrder.address || '') || '';
+  const isFree = perPkg === 0;
+
+  // 各商品の行を描画
+  document.getElementById('split-items').innerHTML = items.map((item, idx) => {
+    const n = _splitPkgs[idx];
+    const fee = perPkg * n;
+    return '<div class="split-row" id="split-row-' + idx + '" style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:12px 14px;background:var(--surface2);border-radius:10px;margin-bottom:8px">' +
+      '<div>' +
+        '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px">' + item.name + '</div>' +
+        '<div style="font-size:11px;color:var(--muted)">' + item.category + ' × ' + item.qty + '個　¥' + Number(item.subtotal).toLocaleString() + '</div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:6px">' +
+        '<button onclick="changeSplitPkg(' + idx + ',-1)" style="width:26px;height:26px;border:1px solid #D1D5DB;background:#fff;border-radius:6px;font-size:14px;cursor:pointer;line-height:1">−</button>' +
+        '<span id="split-num-' + idx + '" style="font-size:15px;font-weight:700;min-width:28px;text-align:center">' + n + '</span>' +
+        '<button onclick="changeSplitPkg(' + idx + ',1)" style="width:26px;height:26px;border:1px solid #D1D5DB;background:#fff;border-radius:6px;font-size:14px;cursor:pointer;line-height:1">＋</button>' +
+        '<span style="font-size:11px;color:var(--muted);margin-left:4px">個口</span>' +
+      '</div>' +
+      '<div id="split-fee-' + idx + '" style="font-size:13px;font-weight:700;min-width:80px;text-align:right;color:' + (isFree ? 'var(--success)' : 'var(--accent)') + '">' +
+        (isFree ? '無料' : '¥' + fee.toLocaleString()) +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  updateSplitSummary();
+
+  // 宛先表示
+  const destEl = document.getElementById('split-dest');
+  if (destEl) {
+    destEl.innerHTML = pref + 'あて　' +
+      (isFree ? '<strong style="color:var(--success)">宮城県内 → 送料無料</strong>'
+              : '1個口 ¥' + perPkg.toLocaleString());
+  }
+}
+
+function changeSplitPkg(idx, delta) {
+  _splitPkgs[idx] = Math.max(1, _splitPkgs[idx] + delta);
+  const perPkg = calcShippingClient(_invOrder.address || '', 1);
+  const fee = perPkg * _splitPkgs[idx];
+  document.getElementById('split-num-' + idx).textContent = _splitPkgs[idx];
+  document.getElementById('split-fee-' + idx).textContent = perPkg === 0 ? '無料' : '¥' + fee.toLocaleString();
+  updateSplitSummary();
+}
+
+function updateSplitSummary() {
+  const items = _invOrder?.items || [];
+  const perPkg = calcShippingClient(_invOrder.address || '', 1);
+  const totalPkg = _splitPkgs.reduce((s, n) => s + n, 0);
+  const totalFee = perPkg * totalPkg;
+  document.getElementById('split-count').textContent = items.length + '通';
+  document.getElementById('split-total-pkg').textContent = totalPkg + '個口';
+  document.getElementById('split-total-fee').textContent =
+    perPkg === 0 ? '¥0（宮城県内・無料）' : '¥' + totalFee.toLocaleString();
+}
+
+/**
+ * 商品別個口設定モーダルから実際に発行する
+ */
+async function confirmSplitInvoices() {
+  if (!_invOrder) return;
+  const items = _invOrder.items || [];
+  const rowIndices = _invOrder.rowIndices || [];
+  const perPkg = calcShippingClient(_invOrder.address || '', 1);
+  if (perPkg === null) {
     showToast('住所から都道府県を特定できません', true); return;
   }
   const pref = _extractPref(_invOrder.address || '') || '';
-  const perPkg = calcShippingClient(_invOrder.address || '', 1);
 
-  if (!confirm(items.length + '件の商品それぞれに請求書を発行します。\n' +
-    '各請求書の送料: ¥' + shippingEach.toLocaleString() + '（' + packages.length + '個口）\n' +
-    '合計 ' + items.length + '通のメールが送信されます。よろしいですか？')) return;
-
+  // モーダルを切り替え：サブモーダル閉じて進捗表示へ
+  closeOverlay('split-overlay');
   document.getElementById('btn-inv-submit').disabled = true;
   const btnEach = document.getElementById('btn-inv-submit-each');
   if (btnEach) btnEach.disabled = true;
   document.getElementById('inv-sending').style.display = 'block';
-  document.getElementById('inv-sending').textContent = '個別請求書を生成中... (0/' + items.length + ')';
 
   const successList = [];
   const errors = [];
-  const pkgDetails = pref + ' ¥' + perPkg.toLocaleString() + '×' + packages.length + '個口';
 
   for (let i = 0; i < items.length; i++) {
+    const pkgN = _splitPkgs[i];
+    const shippingEach = perPkg * pkgN;
+    const pkgDetails = pref + ' ¥' + perPkg.toLocaleString() + '×' + pkgN + '個口';
+
     document.getElementById('inv-sending').textContent =
       '個別請求書を生成中... (' + (i+1) + '/' + items.length + ')';
     try {
@@ -2423,11 +2501,11 @@ async function submitInvoicePerItem() {
         action:      'generateInvoice',
         orderNo:     _invOrder.orderNo,
         group:       _invOrder.group,
-        rowIndices:  [rowIndices[i]],             // ← 1商品分の行だけ渡す
+        rowIndices:  [rowIndices[i]],
         shipping:    shippingEach,
         pkgDetails:  pkgDetails,
-        pkgCount:    packages.length,
-        splitIndex:  (i+1),                        // 1/3, 2/3, 3/3 のような番号
+        pkgCount:    pkgN,
+        splitIndex:  (i+1),
         splitTotal:  items.length
       });
       if (r?.error) throw new Error(r.error);
@@ -2510,6 +2588,47 @@ async function loadInvoiceList() {
     </div>
     <button class="btn btn-cancel" onclick="closeOverlay('inv-overlay')" style="width:100%">キャンセル</button>
     <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;display:none" id="inv-sending">請求書を生成中...</div>
+  </div>
+</div>
+
+<!-- 商品別個口設定モーダル（案A） -->
+<div class="overlay" id="split-overlay" onclick="closeOverlayOutside(event,'split-overlay')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title">📦 商品別・個口設定</div>
+    <div class="modal-sub">商品ごとに個口数を設定して、個別の請求書を発行します</div>
+
+    <!-- 宛先情報 -->
+    <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12px;color:#1E40AF">
+      <span style="font-weight:700">宛先: </span><span id="split-dest"></span>
+    </div>
+
+    <!-- 商品ごとの個口入力リスト -->
+    <div id="split-items" style="margin-bottom:14px"></div>
+
+    <!-- 合計サマリー -->
+    <div style="background:var(--surface2);border-radius:10px;padding:12px 16px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13px">
+        <span style="color:var(--muted)">発行する請求書</span>
+        <strong id="split-count" style="color:var(--text)">—</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13px">
+        <span style="color:var(--muted)">合計個口数</span>
+        <strong id="split-total-pkg" style="color:var(--text)">—</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border);font-size:14px">
+        <span style="color:var(--text);font-weight:700">送料合計</span>
+        <strong id="split-total-fee" style="color:var(--accent);font-size:16px">—</strong>
+      </div>
+    </div>
+
+    <div style="background:var(--wdim);border:1px solid rgba(255,184,0,.3);border-radius:8px;padding:11px 14px;margin-bottom:14px;font-size:12px;color:var(--warn)">
+      ⚠️ 発行すると、商品ごとに別々の請求書PDFが顧客のメールアドレスへ送信されます。
+    </div>
+
+    <div class="mactions">
+      <button class="btn btn-cancel" onclick="closeOverlay('split-overlay')">キャンセル</button>
+      <button class="btn btn-primary" style="flex:2" onclick="confirmSplitInvoices()">📄 この設定で発行する</button>
+    </div>
   </div>
 </div>
 
