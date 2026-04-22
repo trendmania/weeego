@@ -823,7 +823,7 @@ main{max-width:1060px;margin:0 auto;padding:26px 18px;}
       </div>
       <div style="overflow-x:auto">
         <table class="tbl">
-          <thead><tr><th>注文番号</th><th>日時</th><th>氏名</th><th>商品</th><th>グループ</th><th>合計</th><th>請求書</th></tr></thead>
+          <thead><tr><th>注文番号</th><th>日時</th><th>氏名</th><th>商品</th><th>種別</th><th>合計</th><th>請求書</th></tr></thead>
           <tbody id="order-tbody"><tr><td colspan="7" class="no-data">「最新データを取得」をクリックしてください</td></tr></tbody>
         </table>
       </div>
@@ -2358,15 +2358,17 @@ function buildOrderRow(o, realIdx) {
   const btn = o.invoiced
     ? '<span class="tag tag-ok" style="font-size:10px">発行済</span>'
     : '<button class="btn btn-i" style="font-size:11px;padding:4px 10px" onclick="openInvModal(' + realIdx + ')">📄 請求書発行</button>';
-  const groupLabel = o.group === '在庫品'
+  // 注文内の商品種別をバッジで表示（在庫品・予約品が混在する場合は両方出す）
+  const types = [...new Set((o.items||[]).map(i => i.productType || '在庫品'))];
+  const typeLabels = types.map(t => t === '在庫品'
     ? '<span class="tag tag-ok">在庫品</span>'
-    : '<span class="tag tag-reserve">予約品</span>';
+    : '<span class="tag tag-reserve">予約品</span>').join(' ');
   const itemList = (o.items||[]).map(i => i.name + '×' + i.qty + '個').join('、');
   return '<tr><td style="font-size:10px;font-family:monospace">' + (o.orderNo||'') + '</td>' +
     '<td style="font-size:11px">' + (o.datetime||'') + '</td>' +
     '<td style="font-weight:700">' + (o.name||'') + '</td>' +
     '<td style="font-size:12px">' + itemList + '</td>' +
-    '<td>' + groupLabel + '</td>' +
+    '<td>' + typeLabels + '</td>' +
     '<td>¥' + Number(o.total||0).toLocaleString() + '</td>' +
     '<td>' + btn + '</td></tr>';
 }
