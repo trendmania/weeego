@@ -501,56 +501,122 @@ main{max-width:1060px;margin:0 auto;padding:26px 18px;}
 
         <!-- 左：フォーム -->
         <div>
-          <!-- お客様情報 -->
+          <!-- 共通連絡先 -->
           <div class="checkout-form-box">
             <div class="checkout-section">
-              <div class="checkout-title">お客様情報</div>
-              <div class="co-field">
-                <label>氏名（フルネーム）<span class="req-mark">*</span></label>
-                <input type="text" id="co-name" placeholder="山田 太郎">
-              </div>
+              <div class="checkout-title">ご連絡先</div>
               <div class="co-row">
-                <div class="co-field">
-                  <label>電話番号<span class="req-mark">*</span></label>
-                  <input type="tel" id="co-phone" placeholder="090-0000-0000">
-                </div>
                 <div class="co-field">
                   <label>メールアドレス<span class="req-mark">*</span></label>
                   <input type="email" id="co-email" placeholder="example@mail.com">
                 </div>
+                <div class="co-field">
+                  <label>Discord ID　<span style="font-weight:400;color:#9CA3AF">（任意）</span></label>
+                  <input type="text" id="co-discord" placeholder="username#1234">
+                </div>
               </div>
-              <div class="co-zip-row">
+            </div>
+          </div>
+
+          <!-- 配送先情報 -->
+          <div class="checkout-form-box">
+            <div class="checkout-section">
+              <div class="checkout-title">配送先情報</div>
+              <div class="co-field">
+                <label>お名前（フルネーム）<span class="req-mark">*</span></label>
+                <input type="text" id="ship-name" placeholder="山田 太郎">
+              </div>
+              <div class="co-field">
+                <label>電話番号<span class="req-mark">*</span></label>
+                <input type="tel" id="ship-phone" placeholder="090-0000-0000">
+              </div>
+              <div class="co-field">
+                <label>郵便番号<span class="req-mark">*</span></label>
+                <input type="text" id="ship-zip" placeholder="000-0000" maxlength="8" style="max-width:180px">
+              </div>
+              <div class="co-row">
                 <div class="co-field">
-                  <label>郵便番号<span class="req-mark">*</span></label>
-                  <input type="text" id="co-zip" placeholder="000-0000" maxlength="8">
+                  <label>都道府県<span class="req-mark">*</span></label>
+                  <input type="text" id="ship-pref" placeholder="宮城県">
                 </div>
                 <div class="co-field">
-                  <label>都道府県・市区町村・番地<span class="req-mark">*</span></label>
-                  <input type="text" id="co-address" placeholder="東京都〇〇区〇〇 1-2-3">
+                  <label>市区町村<span class="req-mark">*</span></label>
+                  <input type="text" id="ship-city" placeholder="仙台市泉区">
                 </div>
+              </div>
+              <div class="co-field">
+                <label>以降の住所（番地など）<span class="req-mark">*</span></label>
+                <input type="text" id="ship-addr" placeholder="紫山2-6-2">
               </div>
               <div class="co-field">
                 <label>建物名・部屋番号　<span style="font-weight:400;color:#9CA3AF">（任意）</span></label>
-                <input type="text" id="co-building" placeholder="〇〇マンション 101号室">
+                <input type="text" id="ship-building" placeholder="〇〇マンション 101号室">
+              </div>
+            </div>
+          </div>
+
+          <!-- 請求先情報 -->
+          <div class="checkout-form-box">
+            <div class="checkout-section">
+              <div class="checkout-title">請求先情報</div>
+              <!-- 同じチェックボックス -->
+              <label class="co-agree-chk" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;margin-bottom:14px;color:#1E40AF">
+                <input type="checkbox" id="bill-same" onchange="onBillSameToggle()">
+                <span>配送先と同じ情報を使用する</span>
+              </label>
+              <div class="co-field">
+                <label>お名前（フルネーム）<span class="req-mark">*</span></label>
+                <input type="text" id="bill-name" placeholder="山田 太郎">
               </div>
               <div class="co-field">
-                <label>Discord ID　<span style="font-weight:400;color:#9CA3AF">（任意）</span></label>
-                <input type="text" id="co-discord" placeholder="username#1234">
+                <label>電話番号<span class="req-mark">*</span></label>
+                <input type="tel" id="bill-phone" placeholder="090-0000-0000">
               </div>
               <div class="co-field">
-                <label>備考・ご要望　<span style="font-weight:400;color:#9CA3AF">（任意）</span></label>
+                <label>郵便番号<span class="req-mark">*</span></label>
+                <input type="text" id="bill-zip" placeholder="000-0000" maxlength="8" style="max-width:180px">
+              </div>
+              <div class="co-row">
+                <div class="co-field">
+                  <label>都道府県<span class="req-mark">*</span></label>
+                  <input type="text" id="bill-pref" placeholder="宮城県">
+                </div>
+                <div class="co-field">
+                  <label>市区町村<span class="req-mark">*</span></label>
+                  <input type="text" id="bill-city" placeholder="仙台市泉区">
+                </div>
+              </div>
+              <div class="co-field">
+                <label>以降の住所（番地など）<span class="req-mark">*</span></label>
+                <input type="text" id="bill-addr" placeholder="紫山2-6-2">
+              </div>
+              <div class="co-field">
+                <label>建物名・部屋番号　<span style="font-weight:400;color:#9CA3AF">（任意）</span></label>
+                <input type="text" id="bill-building" placeholder="〇〇マンション 101号室">
+              </div>
+            </div>
+          </div>
+
+          <!-- 備考 -->
+          <div class="checkout-form-box">
+            <div class="checkout-section">
+              <div class="checkout-title">備考・ご要望</div>
+              <div class="co-field">
+                <label>ご自由にご記入ください　<span style="font-weight:400;color:#9CA3AF">（任意）</span></label>
                 <textarea id="co-note" placeholder="カラー指定・梱包希望など" rows="3" style="resize:vertical"></textarea>
               </div>
             </div>
+          </div>
 
-            <!-- 注意事項 -->
+          <!-- 注意事項 + 送信ボタン -->
+          <div class="checkout-form-box">
             <div class="checkout-section">
               <div class="checkout-title">注意事項・同意</div>
               <div class="co-agree-box">
                 ・商品予約購入後のキャンセルはできかねます。<br>
-                ・商品によって別途送料が発生します。<br>
-                ・ご入力の個人情報は配送・連絡目的のみに使用します。<br>
-                ・お支払い案内は商品入荷確定後、Discordにて請求書を発行いたします。<br>
+                ・商品によって別途送料が発生します（宮城県内無料／県外一律¥1,200）。<br>
+                ・ご入力の個人情報は配送・請求・連絡目的のみに使用します。<br>
+                ・お支払い案内は商品入荷確定後、請求書を発行いたします。<br>
                 ・仕入先の在庫状況によってキャンセルになる場合がございます。
                 <label class="co-agree-chk">
                   <input type="checkbox" id="co-agree">
@@ -606,32 +672,42 @@ main{max-width:1060px;margin:0 auto;padding:26px 18px;}
     </div>
   </div>
 
-  <!-- ── 管理者パネル ── -->
+  <!-- ── 送料案内パネル ── -->
   <div class="panel" id="panel-shipping">
-    <div style="max-width:920px;margin:0 auto">
-      <div style="font-size:17px;font-weight:700;color:#1A1A2E;margin-bottom:4px">📦 送料表</div>
-      <div style="font-size:12px;color:#666;margin-bottom:14px">ヤマト運輸 宅急便・税込価格　※サイズは3辺合計</div>
-      <div style="overflow-x:auto">
-        <table class="ship-tbl">
-          <thead><tr>
-            <th>サイズ</th><th>最大重量</th>
-            <th>北海道</th><th>北東北</th><th>南東北</th><th>関東</th>
-            <th>信越</th><th>北陸</th><th>中部</th><th>関西</th>
-            <th>中国</th><th>四国</th><th>九州</th><th>沖縄</th>
-          </tr></thead>
-          <tbody id="ship-tbody"></tbody>
-        </table>
+    <div style="max-width:680px;margin:0 auto">
+      <div style="font-size:20px;font-weight:800;color:#1A1A2E;margin-bottom:6px">📦 送料について</div>
+      <div style="font-size:12px;color:#666;margin-bottom:20px">WeeeGOの配送料金は、お届け先の都道府県によって決まります。</div>
+
+      <!-- 宮城県内：無料 -->
+      <div style="background:#ECFDF5;border:1px solid #86EFAC;border-radius:14px;padding:20px 22px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:22px">🎁</span>
+          <span style="font-size:15px;font-weight:800;color:#16A34A">宮城県内の発送</span>
+        </div>
+        <div style="font-size:26px;font-weight:800;color:#16A34A;margin-bottom:6px;letter-spacing:.02em">送料無料</div>
+        <div style="font-size:12px;color:#15803D;line-height:1.8">
+          お届け先が宮城県内の場合、送料は一切かかりません。
+        </div>
       </div>
-      <div style="margin-top:14px;font-size:11px;color:#666;line-height:2">
-        <strong>地域区分</strong><br>
-        北海道：北海道　／　北東北：青森・岩手・秋田　／　南東北：宮城・山形・福島<br>
-        関東：茨城・栃木・群馬・埼玉・千葉・東京・神奈川・山梨　／　信越：新潟・長野　／　北陸：富山・石川・福井<br>
-        中部：岐阜・静岡・愛知・三重　／　関西：滋賀・京都・大阪・兵庫・奈良・和歌山<br>
-        中国：鳥取・島根・岡山・広島・山口　／　四国：徳島・香川・愛媛・高知<br>
-        九州：福岡・佐賀・長崎・熊本・大分・宮崎・鹿児島　／　沖縄：沖縄
+
+      <!-- それ以外：1200円 -->
+      <div style="background:#EFF6FF;border:1px solid #93C5FD;border-radius:14px;padding:20px 22px;margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:22px">🚚</span>
+          <span style="font-size:15px;font-weight:800;color:#2563EB">宮城県外への発送（全国一律）</span>
+        </div>
+        <div style="font-size:26px;font-weight:800;color:#2563EB;margin-bottom:6px;letter-spacing:.02em">¥1,200</div>
+        <div style="font-size:12px;color:#1E40AF;line-height:1.8">
+          宮城県以外の都道府県へのお届けは、全国一律1,200円（税込）の送料を頂戴します。
+        </div>
       </div>
-      <div style="margin-top:12px;background:#FFF7E6;border:1px solid #FCD34D;border-radius:8px;padding:12px 14px;font-size:11px;color:#92400E">
-        ⚠️ ゴルフ・スキー宅急便は定価運賃が適用されます。実際の送料は重量・梱包サイズにより異なる場合があります。
+
+      <!-- 補足 -->
+      <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:14px 18px;font-size:12px;color:#374151;line-height:2">
+        <strong style="color:#111">ご注意</strong><br>
+        ・送料は商品入荷確定後、請求書にて合計金額とあわせてご案内いたします。<br>
+        ・複数個口の発送となる場合でも、上記ルールが適用されます。<br>
+        ・離島等の一部地域でも宮城県外は一律1,200円です。
       </div>
     </div>
   </div>
@@ -1466,25 +1542,88 @@ function renderCheckoutSummary() {
   }).join('');
 }
 
+// ── 「配送先と同じ」チェックボックスの振る舞い ──
+// チェック時に配送先の値を請求先に自動コピー（フィールドは表示したまま残す）
+function onBillSameToggle() {
+  if (!document.getElementById('bill-same').checked) return;
+  const copyPairs = [
+    ['ship-name','bill-name'], ['ship-phone','bill-phone'],
+    ['ship-zip','bill-zip'],   ['ship-pref','bill-pref'],
+    ['ship-city','bill-city'], ['ship-addr','bill-addr'],
+    ['ship-building','bill-building'],
+  ];
+  copyPairs.forEach(([from, to]) => {
+    const f = document.getElementById(from);
+    const t = document.getElementById(to);
+    if (f && t) t.value = f.value;
+  });
+}
+
+// 配送先の値が変わるたびにチェック中なら自動で請求先も更新
+function _bindShipToBillMirror() {
+  ['ship-name','ship-phone','ship-zip','ship-pref','ship-city','ship-addr','ship-building']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        if (document.getElementById('bill-same')?.checked) onBillSameToggle();
+      });
+    });
+}
+window.addEventListener('DOMContentLoaded', _bindShipToBillMirror);
+
+// 住所7項目を連結して1行の住所文字列にする
+function _joinAddress(parts) {
+  // parts: { zip, pref, city, addr, building }
+  const zipStr = parts.zip ? '〒' + parts.zip : '';
+  const body   = [parts.pref, parts.city, parts.addr].filter(Boolean).join('');
+  const bldg   = parts.building || '';
+  return [zipStr, body, bldg].filter(Boolean).join('　').trim();
+}
+
 // ── カート注文確定（複数商品） ──
 async function submitCartOrder() {
   if (cart.length === 0) { showError('co-error', 'カートが空です'); return; }
   if (!document.getElementById('co-agree').checked) {
     showError('co-error', '注意事項への同意が必要です'); return;
   }
-  const name    = document.getElementById('co-name').value.trim();
-  const phone   = document.getElementById('co-phone').value.trim();
-  const email   = document.getElementById('co-email').value.trim();
-  const zip     = document.getElementById('co-zip').value.trim();
-  const addrRaw = document.getElementById('co-address').value.trim();
-  const building = document.getElementById('co-building') ? document.getElementById('co-building').value.trim() : '';
-  const discord  = document.getElementById('co-discord').value.trim();
-  const note     = document.getElementById('co-note').value.trim();
+  const v = id => (document.getElementById(id)?.value || '').trim();
 
-  if (!name || !phone || !email || !zip || !addrRaw) {
-    showError('co-error', '必須項目（*）をすべて入力してください'); return;
-  }
-  const address = zip + '　' + addrRaw;
+  // 共通連絡先
+  const email   = v('co-email');
+  const discord = v('co-discord');
+  const note    = v('co-note');
+
+  // 配送先
+  const shipName     = v('ship-name');
+  const shipPhone    = v('ship-phone');
+  const shipZip      = v('ship-zip');
+  const shipPref     = v('ship-pref');
+  const shipCity     = v('ship-city');
+  const shipAddr     = v('ship-addr');
+  const shipBuilding = v('ship-building');
+
+  // 請求先（「配送先と同じ」チェック時は配送先から自動同期済み）
+  const billSame = document.getElementById('bill-same')?.checked;
+  if (billSame) onBillSameToggle();
+  const billName     = v('bill-name');
+  const billPhone    = v('bill-phone');
+  const billZip      = v('bill-zip');
+  const billPref     = v('bill-pref');
+  const billCity     = v('bill-city');
+  const billAddr     = v('bill-addr');
+  const billBuilding = v('bill-building');
+
+  // 必須チェック
+  if (!email) { showError('co-error', 'メールアドレスを入力してください'); return; }
+  const reqShip = [shipName, shipPhone, shipZip, shipPref, shipCity, shipAddr];
+  if (reqShip.some(x => !x)) { showError('co-error', '配送先情報の必須項目（*）をすべて入力してください'); return; }
+  const reqBill = [billName, billPhone, billZip, billPref, billCity, billAddr];
+  if (reqBill.some(x => !x)) { showError('co-error', '請求先情報の必須項目（*）をすべて入力してください'); return; }
+
+  // 住所を連結（スプレッドシート記録用）
+  const shipAddress = _joinAddress({ zip: shipZip, pref: shipPref, city: shipCity, addr: shipAddr, building: shipBuilding });
+  const billAddress = _joinAddress({ zip: billZip, pref: billPref, city: billCity, addr: billAddr, building: billBuilding });
 
   document.getElementById('co-submit-btn').disabled = true;
   document.getElementById('co-submitting').style.display = 'block';
@@ -1494,12 +1633,21 @@ async function submitCartOrder() {
   const errors = [];
   let r = null;
 
-  // GASへ送信（全商品を1注文番号でまとめて）
+  // GASへ送信（配送先・請求先を分けて送る）
   try {
     r = await gasPost({
       action: 'submitCartOrder',
-      items: cart.map(item => ({ productId: item.id, qty: item.qty })),
-      name, phone, email, address, building, discord, note
+      items:  cart.map(item => ({ productId: item.id, qty: item.qty })),
+      email, discord, note,
+      // 配送先
+      name:          shipName,        // 互換維持（従来の name は配送先氏名）
+      phone:         shipPhone,       // 互換維持
+      address:       shipAddress,     // 互換維持（配送先住所の連結形式）
+      building:      shipBuilding,    // 互換維持
+      shipName, shipPhone, shipZip, shipPref, shipCity, shipAddr, shipBuilding, shipAddress,
+      // 請求先
+      billName, billPhone, billZip, billPref, billCity, billAddr, billBuilding, billAddress,
+      billSame: !!billSame
     });
     if (r?.error) { errors.push(r.error); allOk = false; }
     else {
@@ -1510,7 +1658,7 @@ async function submitCartOrder() {
           p.remain   = Math.max(0, Number(p.remain) - item.qty);
         }
         const dt = new Date().toLocaleDateString('ja-JP') + ' ' + new Date().toTimeString().slice(0,5);
-        orderLog.push({ datetime: dt, name, productName: item.name, qty: item.qty, type: '予約購入', total: item.price * item.qty });
+        orderLog.push({ datetime: dt, name: shipName, productName: item.name, qty: item.qty, type: '予約購入', total: item.price * item.qty });
       });
     }
   } catch(e) { errors.push(e.message); allOk = false; }
@@ -1525,16 +1673,21 @@ async function submitCartOrder() {
     document.getElementById('co-submit-btn').disabled = false;
     document.getElementById('co-submitting').style.display = 'none';
     // リセット
-    ['co-name','co-phone','co-email','co-zip','co-address','co-building','co-discord','co-note'].forEach(id => {
+    [
+      'co-email','co-discord','co-note',
+      'ship-name','ship-phone','ship-zip','ship-pref','ship-city','ship-addr','ship-building',
+      'bill-name','bill-phone','bill-zip','bill-pref','bill-city','bill-addr','bill-building'
+    ].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
+    const bs = document.getElementById('bill-same'); if (bs) bs.checked = false;
     document.getElementById('co-agree').checked = false;
     const orderNo = r?.orderNo || '';
     document.getElementById('success-order-no').textContent = orderNo ? '注文番号：' + orderNo : '';
     document.getElementById('success-order-no').style.display = orderNo ? 'inline-block' : 'none';
     document.getElementById('success-msg').innerHTML =
-      '<strong>' + name + '</strong> 様<br>' + summary;
+      '<strong>' + shipName + '</strong> 様<br>' + summary;
     switchPanel('shop');
     setTimeout(() => openOverlay('success-overlay'), 50); // パネル切替後に表示
   } else {
@@ -1950,44 +2103,30 @@ async function changePassword() {
 
 <script>
 // =========================================================
-// 送料テーブル
+// 送料ルール（WeeeGO版）
+//   宮城県内: 無料 / 宮城県外: 一律¥1,200
 // =========================================================
-const SHIP_DATA = {
-  60: [650,470,470,470,484,517,517,572,737,737,878,1760],
-  80: [715,540,540,573,583,613,613,660,814,814,965,2376],
-  100:[880,660,660,704,704,847,715,880,1100,1100,1364,3014],
-  120:[1210,748,748,770,770,880,880,1100,1320,1320,1551,3663],
-  140:[1430,880,880,880,880,1100,968,1210,1573,1573,1749,4334],
-  160:[1650,1012,1012,1012,1012,1430,1210,1595,1760,1760,1936,4983],
-  180:[2310,1760,1760,1760,1760,2090,2090,2200,2310,2310,2893,6853],
-  200:[2695,2156,2156,2156,2156,2541,2541,2618,2772,2772,3278,7623]
-};
-const SHIP_REGIONS=['北海道','北東北','南東北','関東','信越','北陸','中部','関西','中国','四国','九州','沖縄'];
-const SHIP_SIZES=[60,80,100,120,140,160,180,200];
-const SHIP_MAXW={60:'2kg',80:'5kg',100:'10kg',120:'15kg',140:'20kg',160:'25kg',180:'30kg',200:'30kg'};
-const PREF_MAP={'北海道':0,'青森県':1,'岩手県':1,'秋田県':1,'宮城県':2,'山形県':2,'福島県':2,
-  '茨城県':3,'栃木県':3,'群馬県':3,'埼玉県':3,'千葉県':3,'東京都':3,'神奈川県':3,'山梨県':3,
-  '新潟県':4,'長野県':4,'富山県':5,'石川県':5,'福井県':5,
-  '岐阜県':6,'静岡県':6,'愛知県':6,'三重県':6,
-  '滋賀県':7,'京都府':7,'大阪府':7,'兵庫県':7,'奈良県':7,'和歌山県':7,
-  '鳥取県':8,'島根県':8,'岡山県':8,'広島県':8,'山口県':8,
-  '徳島県':9,'香川県':9,'愛媛県':9,'高知県':9,
-  '福岡県':10,'佐賀県':10,'長崎県':10,'熊本県':10,'大分県':10,'宮崎県':10,'鹿児島県':10,
-  '沖縄県':11};
+const SHIP_MIYAGI_FREE = 0;
+const SHIP_OTHER_FLAT  = 1200;
 
-function renderShippingTable() {
-  document.getElementById('ship-tbody').innerHTML = SHIP_SIZES.map(sz =>
-    '<tr><td>' + sz + 'サイズ</td><td>' + SHIP_MAXW[sz] + '以内</td>' +
-    SHIP_DATA[sz].map(f => '<td>¥' + f.toLocaleString() + '</td>').join('') + '</tr>'
-  ).join('');
-}
-function calcShippingClient(address, size) {
+function _extractPref(address) {
   const addr = (address||'').replace(/[〒]?\d{3,4}-?\d{4}[\s　]*/,'').trim();
   const m = addr.match(/([^ 　\d]+?[都道府県])/);
-  if (!m) return null;
-  const idx = PREF_MAP[m[1]];
-  return (idx !== undefined && SHIP_DATA[parseInt(size)]) ? SHIP_DATA[parseInt(size)][idx] : null;
+  return m ? m[1] : null;
 }
+
+/**
+ * 新送料計算：都道府県だけで決定
+ * @returns {number|null} 送料（円）。住所から都道府県を特定できない場合はnull
+ */
+function calcShippingClient(address) {
+  const pref = _extractPref(address);
+  if (!pref) return null;
+  return pref === '宮城県' ? SHIP_MIYAGI_FREE : SHIP_OTHER_FLAT;
+}
+
+// 送料表タブは表示専用（計算に使わない）
+function renderShippingTable() { /* no-op : 静的HTML表示 */ }
 
 // =========================================================
 // 注文ログ
@@ -2046,47 +2185,52 @@ function renderPackages() {
 }
 
 function calcSingleFee(size) {
+  // 新ルール：個口サイズは無関係。宛先で一律判定
   if (!_invOrder) return null;
-  return calcShippingClient(_invOrder.address || '', size);
+  return calcShippingClient(_invOrder.address || '');
 }
 
 function updatePkgFeeLabel(idx) {
   const el = document.getElementById('pkg-fee-' + idx);
   if (!el) return;
-  const fee = calcSingleFee(packages[idx]);
-  el.textContent = fee !== null ? '¥' + fee.toLocaleString() : '計算不可';
+  // 個口ごとの送料は表示しない（合計のみ）
+  el.textContent = idx === 0 ? '宛先判定' : '—';
 }
 
 function calcTotalFee() {
-  const fees = packages.map(sz => calcSingleFee(sz));
-  const hasNull = fees.some(f => f === null);
-  const total = fees.reduce((s, f) => s + (f || 0), 0);
-  const totalEl = document.getElementById('inv-fee-total');
+  // 宛先から一度だけ送料を計算（個口数に関わらず同額）
+  const fee = _invOrder ? calcShippingClient(_invOrder.address || '') : null;
+  const totalEl  = document.getElementById('inv-fee-total');
   const detailEl = document.getElementById('inv-fee');
+  const pref = _invOrder ? _extractPref(_invOrder.address || '') : null;
+
   if (totalEl) {
-    totalEl.textContent = hasNull ? '計算不可' : '¥' + total.toLocaleString();
-    totalEl.style.color = hasNull ? 'var(--danger)' : 'var(--accent)';
+    if (fee === null) {
+      totalEl.textContent = '計算不可';
+      totalEl.style.color = 'var(--danger)';
+    } else {
+      totalEl.textContent = '¥' + fee.toLocaleString();
+      totalEl.style.color = fee === 0 ? 'var(--success)' : 'var(--accent)';
+    }
   }
   if (detailEl) {
     if (!_invOrder?.address) {
       detailEl.textContent = '※ 住所が未登録です';
       detailEl.style.color = 'var(--warn)';
-    } else if (hasNull) {
-      detailEl.textContent = '都道府県を特定できない住所があります';
+    } else if (fee === null) {
+      detailEl.textContent = '都道府県を特定できない住所です';
       detailEl.style.color = 'var(--danger)';
+    } else if (fee === 0) {
+      detailEl.textContent = pref + 'あて　' + packages.length + '個口　【宮城県内 → 送料無料】';
+      detailEl.style.color = 'var(--success)';
     } else {
-      const addr = _invOrder.address || '';
-      const cleanAddr = addr.replace(/[〒]?\d{3,4}-?\d{4}[\s　]*/,'').trim();
-      const m = cleanAddr.match(/([^ 　\d]+?[都道府県])/);
-      const pref = m ? m[1] : '';
-      detailEl.textContent = pref + 'あて　' + packages.length + '個口　¥' +
-        fees.map((f,i) => packages[i] + 'サイズ:¥' + (f||0).toLocaleString()).join(' + ');
+      detailEl.textContent = pref + 'あて　' + packages.length + '個口　【宮城県外 → 全国一律 ¥1,200】';
       detailEl.style.color = 'var(--muted)';
     }
   }
   // 各個口のラベルも更新
   packages.forEach((_, idx) => updatePkgFeeLabel(idx));
-  return hasNull ? null : total;
+  return fee;
 }
 
 let gasOrders = [];
@@ -2180,20 +2324,31 @@ function openInvModal(idx) {
   renderPackages();
   calcTotalFee();
   document.getElementById('btn-inv-submit').disabled = false;
+  const btnEach = document.getElementById('btn-inv-submit-each');
+  if (btnEach) btnEach.disabled = false;
+  // 商品が1つだけなら「商品ごと」ボタンを隠す
+  const itemCount = (_invOrder.items||[]).length;
+  if (btnEach) btnEach.style.display = itemCount > 1 ? '' : 'none';
   document.getElementById('inv-sending').style.display = 'none';
   openOverlay('inv-overlay');
 }
-// updateFeePreview → calcTotalFee に統合
+
+/**
+ * 一括発行：全商品を1枚の請求書にまとめる
+ */
 async function submitInvoice() {
   if (!_invOrder) return;
-  // 個口送料を計算
-  const fees = packages.map(sz => calcSingleFee(sz));
-  if (fees.some(f => f === null)) {
-    showToast('送料を計算できない個口があります', true); return;
+  // 新ルール：宛先判定のみで送料決定
+  const shipping = calcShippingClient(_invOrder.address || '');
+  if (shipping === null) {
+    showToast('住所から都道府県を特定できません', true); return;
   }
-  const totalShipping = fees.reduce((s, f) => s + f, 0);
-  const pkgDetails = packages.map((sz, i) => sz + 'サイズ:¥' + fees[i].toLocaleString()).join(' / ');
+  const pref = _extractPref(_invOrder.address || '') || '';
+  const pkgDetails = pref + '(' + packages.length + '個口)';
+
   document.getElementById('btn-inv-submit').disabled = true;
+  const btnEach = document.getElementById('btn-inv-submit-each');
+  if (btnEach) btnEach.disabled = true;
   document.getElementById('inv-sending').style.display = 'block';
   try {
     const r = await gasPost({
@@ -2201,9 +2356,9 @@ async function submitInvoice() {
       orderNo:     _invOrder.orderNo,
       group:       _invOrder.group,
       rowIndices:  _invOrder.rowIndices,
-      shipping:    totalShipping,   // 個口合算送料
-      pkgDetails:  pkgDetails,      // 個口明細（ログ用）
-      pkgCount:    packages.length  // 個口数
+      shipping:    shipping,
+      pkgDetails:  pkgDetails,
+      pkgCount:    packages.length
     });
     if (r?.error) throw new Error(r.error);
     closeOverlay('inv-overlay');
@@ -2212,8 +2367,78 @@ async function submitInvoice() {
   } catch(e) {
     showToast('発行失敗: ' + e.message, true);
     document.getElementById('btn-inv-submit').disabled = false;
+    if (btnEach) btnEach.disabled = false;
     document.getElementById('inv-sending').style.display = 'none';
   }
+}
+
+/**
+ * 商品ごとに個別発行：注文内の各商品に対して1枚ずつ請求書を発行
+ * 送料は新ルール（宛先判定）で商品ごとに計算（宮城=0、他=1200）
+ * 個口数は各請求書に同じ値を記録
+ */
+async function submitInvoicePerItem() {
+  if (!_invOrder) return;
+  const items = _invOrder.items || [];
+  const rowIndices = _invOrder.rowIndices || [];
+  if (items.length < 2) {
+    showToast('商品が1つのため、一括発行と同じです', true); return;
+  }
+  if (items.length !== rowIndices.length) {
+    showToast('内部エラー：注文行と商品数が一致しません', true); return;
+  }
+
+  // 送料（新ルール）
+  const shippingEach = calcShippingClient(_invOrder.address || '');
+  if (shippingEach === null) {
+    showToast('住所から都道府県を特定できません', true); return;
+  }
+  const pref = _extractPref(_invOrder.address || '') || '';
+
+  if (!confirm(items.length + '件の商品それぞれに請求書を発行します。\n' +
+    '各請求書の送料: ¥' + shippingEach.toLocaleString() + '\n' +
+    '合計 ' + items.length + '通のメールが送信されます。よろしいですか？')) return;
+
+  document.getElementById('btn-inv-submit').disabled = true;
+  const btnEach = document.getElementById('btn-inv-submit-each');
+  if (btnEach) btnEach.disabled = true;
+  document.getElementById('inv-sending').style.display = 'block';
+  document.getElementById('inv-sending').textContent = '個別請求書を生成中... (0/' + items.length + ')';
+
+  const successList = [];
+  const errors = [];
+
+  for (let i = 0; i < items.length; i++) {
+    document.getElementById('inv-sending').textContent =
+      '個別請求書を生成中... (' + (i+1) + '/' + items.length + ')';
+    try {
+      const r = await gasPost({
+        action:      'generateInvoice',
+        orderNo:     _invOrder.orderNo,
+        group:       _invOrder.group,
+        rowIndices:  [rowIndices[i]],             // ← 1商品分の行だけ渡す
+        shipping:    shippingEach,
+        pkgDetails:  pref + '(' + packages.length + '個口)',
+        pkgCount:    packages.length,
+        splitIndex:  (i+1),                        // 1/3, 2/3, 3/3 のような番号
+        splitTotal:  items.length
+      });
+      if (r?.error) throw new Error(r.error);
+      successList.push(r.invoiceNo);
+    } catch(e) {
+      errors.push(items[i].name + ': ' + e.message);
+    }
+  }
+
+  closeOverlay('inv-overlay');
+  document.getElementById('inv-sending').textContent = '請求書を生成中...';
+  if (errors.length === 0) {
+    showToast(items.length + '件の請求書を発行・送信しました');
+  } else {
+    showToast(successList.length + '件成功 / ' + errors.length + '件失敗', true);
+    console.error('発行失敗:', errors);
+  }
+  loadOrdersForInvoice(); loadInvoiceList();
 }
 async function loadInvoiceList() {
   try {
@@ -2237,7 +2462,7 @@ async function loadInvoiceList() {
 
 <!-- 請求書発行モーダル -->
 <div class="overlay" id="inv-overlay" onclick="closeOverlayOutside(event,'inv-overlay')">
-  <div class="modal" style="max-width:480px">
+  <div class="modal" style="max-width:520px">
     <div class="modal-title">📄 請求書を発行する</div>
     <div class="modal-sub">商品入荷確定後、顧客へPDF請求書をメール送信します</div>
     <!-- 注文情報 -->
@@ -2264,10 +2489,19 @@ async function loadInvoiceList() {
     <div style="background:var(--wdim);border:1px solid rgba(255,184,0,.3);border-radius:8px;padding:11px 14px;margin-bottom:14px;font-size:12px;color:var(--warn)">
       ⚠️ 発行後、顧客のメールアドレスへ請求書PDFが自動送信されます。
     </div>
-    <div class="mactions">
-      <button class="btn btn-cancel" onclick="closeOverlay('inv-overlay')">キャンセル</button>
-      <button class="btn btn-primary" style="flex:2" id="btn-inv-submit" onclick="submitInvoice()">📄 発行・送信する</button>
+    <!-- 2種類の発行ボタン -->
+    <div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#0369A1;margin-bottom:10px">📑 発行方法を選択</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn btn-primary" id="btn-inv-submit" onclick="submitInvoice()" style="padding:12px 8px;font-size:13px;line-height:1.4">
+          📄 一括発行<br><span style="font-size:10px;font-weight:500;opacity:.85">全商品を1枚にまとめる</span>
+        </button>
+        <button class="btn" id="btn-inv-submit-each" onclick="submitInvoicePerItem()" style="padding:12px 8px;font-size:13px;line-height:1.4;background:#0369A1;color:#fff;border:none;border-radius:8px;cursor:pointer">
+          📄 商品ごと発行<br><span style="font-size:10px;font-weight:500;opacity:.9">商品ごとに個別の請求書</span>
+        </button>
+      </div>
     </div>
+    <button class="btn btn-cancel" onclick="closeOverlay('inv-overlay')" style="width:100%">キャンセル</button>
     <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;display:none" id="inv-sending">請求書を生成中...</div>
   </div>
 </div>
