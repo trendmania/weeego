@@ -1199,16 +1199,25 @@ let activeFilter = 'すべて';
 let currentPid = null;
 
 // ── GAS通信 ───────────────────────────────────────
+// iPhone等のブラウザキャッシュ対策: タイムスタンプ付与 + cache:'no-store'
 async function gasGet(params) {
   if (!GAS_URL) return null;
-  const res = await fetch(GAS_URL + '?' + new URLSearchParams(params));
+  const p = Object.assign({}, params, { _ts: Date.now() + '_' + Math.random().toString(36).slice(2,8) });
+  const res = await fetch(GAS_URL + '?' + new URLSearchParams(p), {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' }
+  });
   return res.json();
 }
 // POSTの代わりにGETのdataパラメータにJSONを乗せて送信（CORS回避）
 async function gasPost(data) {
   if (!GAS_URL) return null;
-  const encoded = encodeURIComponent(JSON.stringify(data));
-  const res = await fetch(GAS_URL + '?data=' + encoded);
+  const payload = Object.assign({}, data, { _ts: Date.now() + '_' + Math.random().toString(36).slice(2,8) });
+  const encoded = encodeURIComponent(JSON.stringify(payload));
+  const res = await fetch(GAS_URL + '?data=' + encoded, {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' }
+  });
   return res.json();
 }
 
