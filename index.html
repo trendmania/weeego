@@ -1489,23 +1489,6 @@ function renderCatList() {
 }
 
 // ── 注文モーダル ──────────────────────────────────
-function openOrderModal(id) {
-  const p = products.find(x => x.id == id);
-  currentPid = id;
-  const r = remain(p);
-  document.getElementById('m-cat').textContent = p.category;
-  document.getElementById('m-name').textContent = p.name;
-  document.getElementById('m-price').textContent = '¥' + Number(p.price).toLocaleString();
-  document.getElementById('m-remain-note').textContent = `残${r}個`;
-  document.getElementById('m-qty').max = r;
-  document.getElementById('m-qty').value = 1;
-  ['m-fullname','m-phone','m-email','m-zip','m-address','m-discord','m-note'].forEach(i => document.getElementById(i).value = '');
-  document.getElementById('m-agree').checked = false;
-  document.getElementById('btn-submit').disabled = false;
-  document.getElementById('submitting-msg').style.display = 'none';
-  openOverlay('order-overlay');
-}
-
 // ═══════════════════════════════════════════════════════════
 // カート機能
 // ═══════════════════════════════════════════════════════════
@@ -1838,46 +1821,6 @@ function showError(id, msg) {
 
 
 
-async function submitOrder() {
-  if (!document.getElementById('m-agree').checked) { showToast('注意事項への同意が必要です', true); return; }
-  const name    = document.getElementById('m-fullname').value.trim();
-  const phone   = document.getElementById('m-phone').value.trim();
-  const email   = document.getElementById('m-email').value.trim();
-  const zip     = document.getElementById('m-zip').value.trim();
-  const addrRaw = document.getElementById('m-address').value.trim();
-  const address = (zip ? '〒' + zip + ' ' : '') + addrRaw; // 結合して保存
-  if (!name || !phone || !email || !zip || !addrRaw) { showToast('必須項目（*）を入力してください', true); return; }
-  const p    = products.find(x => x.id == currentPid);
-  const qty  = parseInt(document.getElementById('m-qty').value) || 1;
-  const r    = remain(p);
-  if (qty < 1 || qty > r) { showToast(`在庫が足りません（残${r}個）`, true); return; }
-  const type    = document.getElementById('m-type').value;
-  const discord = document.getElementById('m-discord').value.trim();
-  const note    = document.getElementById('m-note').value.trim();
-  document.getElementById('btn-submit').disabled = true;
-  document.getElementById('submitting-msg').style.display = 'block';
-  try {
-    const result = await gasPost({ action:'submitOrder', productId:p.id, name, phone, email, address, discord, note, qty, type });
-    if (!result || result.error) throw new Error(result?.error || '送信エラー');
-    const dt = new Date().toLocaleDateString('ja-JP') + ' ' + new Date().toTimeString().slice(0,5);
-    orderLog.push({ datetime: dt, name, productName: p.name, qty, type, total: p.price * qty });
-    localStorage.setItem('weeego_local_orders', JSON.stringify(orderLog));
-    p.reserved = Number(p.reserved) + qty;
-    p.remain   = Number(p.remain ?? (p.stock - p.reserved + qty)) - qty;
-    closeOverlay('order-overlay');
-    document.getElementById('success-msg').innerHTML =
-      `<strong>${name}</strong> 様の${type === 'order' ? 'ご注文' : 'ご予約'}を受け付けました。<br>
-      商品：${p.name} × ${qty}個<br>ご合計：¥${(p.price * qty).toLocaleString()}<br><br>担当者より順次ご連絡いたします。`;
-    openOverlay('success-overlay');
-    renderAll();
-  } catch (e) {
-    showToast('送信に失敗しました: ' + e.message, true);
-    document.getElementById('btn-submit').disabled = false;
-    document.getElementById('submitting-msg').style.display = 'none';
-  }
-}
-
-
 // ── メンバー管理 ──────────────────────────────────
 let memberList = [];
 
@@ -2184,7 +2127,8 @@ async function changePassword() {
   if (nw.length < 6) { errEl.textContent = '6文字以上で設定してください'; errEl.style.display = 'block'; return; }
   if (nw !== confirm) { errEl.textContent = '新しいパスワードが一致しません'; errEl.style.display = 'block'; return; }
   try {
-    const r = await gasPost({ action: 'changePassword', currentPassword: cur, newPassword: nw });
+    // GAS側のパラメータ名は current / newPass
+    const r = await gasPost({ action: 'changePassword', current: cur, newPass: nw });
     if (r?.error) throw new Error(r.error);
     closeOverlay('pw-change-overlay');
     showToast('パスワードを変更しました');
