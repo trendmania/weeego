@@ -1199,14 +1199,11 @@ let activeFilter = 'すべて';
 let currentPid = null;
 
 // ── GAS通信 ───────────────────────────────────────
-// iPhone等のブラウザキャッシュ対策: タイムスタンプ付与 + cache:'no-store'
+// iPhone等のブラウザキャッシュ対策: タイムスタンプ付与のみ（headers指定はCORS preflight誘発のため不可）
 async function gasGet(params) {
   if (!GAS_URL) return null;
   const p = Object.assign({}, params, { _ts: Date.now() + '_' + Math.random().toString(36).slice(2,8) });
-  const res = await fetch(GAS_URL + '?' + new URLSearchParams(p), {
-    cache: 'no-store',
-    headers: { 'Cache-Control': 'no-cache' }
-  });
+  const res = await fetch(GAS_URL + '?' + new URLSearchParams(p));
   return res.json();
 }
 // POSTの代わりにGETのdataパラメータにJSONを乗せて送信（CORS回避）
@@ -1214,10 +1211,7 @@ async function gasPost(data) {
   if (!GAS_URL) return null;
   const payload = Object.assign({}, data, { _ts: Date.now() + '_' + Math.random().toString(36).slice(2,8) });
   const encoded = encodeURIComponent(JSON.stringify(payload));
-  const res = await fetch(GAS_URL + '?data=' + encoded, {
-    cache: 'no-store',
-    headers: { 'Cache-Control': 'no-cache' }
-  });
+  const res = await fetch(GAS_URL + '?data=' + encoded);
   return res.json();
 }
 
