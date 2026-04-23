@@ -900,6 +900,61 @@ main{max-width:1060px;margin:0 auto;padding:26px 18px;}
         </div>
       </div>
 
+      <!-- B2クラウド設定 -->
+      <div class="form-card">
+        <h3>🚚 ヤマトB2クラウド設定</h3>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.8">
+          B2クラウドへのCSV取込時に必須となる情報です。一度登録すれば以降のCSV出力に自動で反映されます。<br>
+          <strong style="color:#D97706">※「請求先顧客コード」「運賃管理番号」</strong>はB2クラウドの契約情報に記載されています。
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="ff">
+            <label>請求先顧客コード <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="b2-billingCode" placeholder="例: 1234567890" maxlength="12">
+          </div>
+          <div class="ff">
+            <label>運賃管理番号 <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="b2-freightMgmtNo" placeholder="例: 01" maxlength="2">
+          </div>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px">ご依頼主情報（発送元）</div>
+        <div class="ff" style="margin-bottom:10px">
+          <label>ご依頼主名</label>
+          <input type="text" id="b2-senderName" placeholder="合同会社 H.J.C">
+        </div>
+        <div class="ff" style="margin-bottom:10px">
+          <label>ご依頼主名（カナ・任意）</label>
+          <input type="text" id="b2-senderNameKana" placeholder="ｺﾞｳﾄﾞｳｶﾞｲｼｬｴｲﾁｼﾞｪｰｼｰ">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+          <div class="ff">
+            <label>電話番号</label>
+            <input type="text" id="b2-senderPhone" placeholder="080-6038-7304">
+          </div>
+          <div class="ff">
+            <label>郵便番号（ハイフンあり）</label>
+            <input type="text" id="b2-senderZip" placeholder="981-3205">
+          </div>
+        </div>
+        <div class="ff" style="margin-bottom:10px">
+          <label>住所</label>
+          <input type="text" id="b2-senderAddress" placeholder="宮城県仙台市泉区紫山2-6-2">
+        </div>
+        <div class="ff" style="margin-bottom:14px">
+          <label>建物名（任意）</label>
+          <input type="text" id="b2-senderBuilding" placeholder="">
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="saveB2Settings()">💾 保存する</button>
+          <button class="btn btn-i" onclick="loadB2SettingsIntoForm()">↻ 再読込</button>
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:var(--muted);line-height:1.8">
+          ※ 内容はGASのスクリプトプロパティに保存されます<br>
+          ※ 送り状種類は「0:発払い」固定・出荷予定日は出力日当日になります
+        </div>
+      </div>
+
       <!-- カテゴリ確認 -->
       <div class="form-card">
         <h3>カテゴリ管理</h3>
@@ -981,10 +1036,12 @@ main{max-width:1060px;margin:0 auto;padding:26px 18px;}
             <th>配送先氏名</th>
             <th>都道府県</th>
             <th>品名</th>
+            <th style="width:60px">個口数</th>
             <th style="min-width:160px">伝票番号</th>
             <th>状態</th>
+            <th style="width:90px">個別出力</th>
           </tr></thead>
-          <tbody id="b2-tbody"><tr><td colspan="7" class="no-data">「最新データを取得」をクリックしてください</td></tr></tbody>
+          <tbody id="b2-tbody"><tr><td colspan="9" class="no-data">「最新データを取得」をクリックしてください</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1256,6 +1313,7 @@ async function connect() {
     await loadProducts();
     // stats（累計注文・顧客数）は非表示のため取得しない
     await loadNotifyEmail();
+    await loadB2SettingsIntoForm();
   } catch (e) {
     setSyncStatus('err', '接続エラー');
   }
@@ -2626,6 +2684,7 @@ let b2Orders = [];              // 注文一覧
 let b2Selection = new Set();    // 選択中の注文番号
 let b2Tracking = {};            // { orderNo: tracking } 伝票番号マップ
 let b2Shipments = {};           // サーバ側の発送データ（GAS発送管理シートから取得）
+let b2PkgCounts = {};           // { orderNo: 個口数 } B2CSV出力時の発行枚数
 
 async function loadB2Orders() {
   showToast('注文・発送データを取得中...');
@@ -2701,7 +2760,7 @@ function renderB2Orders() {
   document.getElementById('b2-count').textContent = list.length + '件';
 
   if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="no-data">該当する注文がありません</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="no-data">該当する注文がありません</td></tr>';
     const all = document.getElementById('b2-check-all'); if (all) all.checked = false;
     return;
   }
@@ -2713,6 +2772,7 @@ function renderB2Orders() {
     const tracking = b2Tracking[o.orderNo] || '';
     const shipStatus = b2Shipments[o.orderNo]?.status || '';
     const sentAt = b2Shipments[o.orderNo]?.sentAt || '';
+    const pkgCount = b2PkgCounts[o.orderNo] || 1;
 
     // 状態タグ
     let statusTag;
@@ -2736,6 +2796,12 @@ function renderB2Orders() {
       '<td style="font-weight:600">' + (o.shipName || '') + '</td>' +
       '<td style="font-size:12px">' + pref + '</td>' +
       '<td style="font-size:12px;max-width:260px">' + itemSummary + '</td>' +
+      '<td style="text-align:center">' +
+        '<input type="number" min="1" max="99" value="' + pkgCount + '" ' +
+        'onchange="onPkgCountChange(\'' + o.orderNo + '\', this.value)" ' +
+        'style="width:52px;padding:4px 6px;font-size:12px;text-align:center;border:1px solid var(--border2);border-radius:6px;background:var(--bg)" ' +
+        'title="B2発行枚数（個口数）">' +
+      '</td>' +
       '<td>' +
         '<input type="text" class="b2-tracking-input" data-orderno="' + o.orderNo + '" ' +
         'value="' + tracking.replace(/"/g,'&quot;') + '" ' +
@@ -2744,6 +2810,9 @@ function renderB2Orders() {
         'style="width:100%;padding:5px 8px;font-size:12px;font-family:monospace;border:1px solid var(--border2);border-radius:6px;background:var(--bg);">' +
       '</td>' +
       '<td>' + statusTag + '</td>' +
+      '<td style="text-align:center">' +
+        '<button class="btn btn-i" style="font-size:10px;padding:4px 8px" onclick="downloadB2CsvSingle(\'' + o.orderNo + '\')" title="この注文のみB2CSVをダウンロード">📤 CSV</button>' +
+      '</td>' +
     '</tr>';
   }).join('');
 
@@ -2752,6 +2821,11 @@ function renderB2Orders() {
     const listOrderNos = list.map(o => o.orderNo);
     allChk.checked = listOrderNos.length > 0 && listOrderNos.every(n => b2Selection.has(n));
   }
+}
+
+function onPkgCountChange(orderNo, value) {
+  const n = Math.max(1, Math.min(99, parseInt(value) || 1));
+  b2PkgCounts[orderNo] = n;
 }
 
 function onTrackingInput(orderNo, value) {
@@ -2803,52 +2877,227 @@ function _parseAddress(raw) {
  * B2取込用CSV生成・ダウンロード
  * 列: お客様管理番号（注文番号）, お届け先電話番号, 郵便番号, 住所, 建物名, 氏名, 品名
  */
+// B2クラウド設定（ヤマト運輸）のキャッシュ
+let b2Settings = null;
+async function loadB2Settings() {
+  try {
+    const r = await gasGet({ action: 'getB2Settings' });
+    if (r?.success) b2Settings = r;
+  } catch(e) { console.warn('B2設定取得失敗:', e); }
+  return b2Settings;
+}
+
+/**
+ * B2設定を設定画面のフォームに読み込む（ページ初期化時＆手動再読込）
+ */
+async function loadB2SettingsIntoForm() {
+  const s = await loadB2Settings();
+  if (!s) return;
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  setVal('b2-billingCode',     s.billingCode);
+  setVal('b2-freightMgmtNo',   s.freightMgmtNo);
+  setVal('b2-senderName',      s.senderName);
+  setVal('b2-senderNameKana',  s.senderNameKana);
+  setVal('b2-senderPhone',     s.senderPhone);
+  setVal('b2-senderZip',       s.senderZip);
+  setVal('b2-senderAddress',   s.senderAddress);
+  setVal('b2-senderBuilding',  s.senderBuilding);
+}
+
+/**
+ * B2設定を保存
+ */
+async function saveB2Settings() {
+  const getVal = id => (document.getElementById(id)?.value || '').trim();
+  const data = {
+    action: 'setB2Settings',
+    billingCode:     getVal('b2-billingCode'),
+    freightMgmtNo:   getVal('b2-freightMgmtNo'),
+    senderName:      getVal('b2-senderName'),
+    senderNameKana:  getVal('b2-senderNameKana'),
+    senderPhone:     getVal('b2-senderPhone'),
+    senderZip:       getVal('b2-senderZip'),
+    senderAddress:   getVal('b2-senderAddress'),
+    senderBuilding:  getVal('b2-senderBuilding')
+  };
+  try {
+    const r = await gasPost(data);
+    if (r?.error) throw new Error(r.error);
+    showToast('B2クラウド設定を保存しました');
+    // キャッシュ更新
+    b2Settings = null;
+    await loadB2Settings();
+  } catch(e) { showToast('保存失敗: ' + e.message, true); }
+}
+
+/**
+ * 配送先住所から都道府県・市区町村・番地部分を抽出してB2形式に正規化
+ * B2仕様: 都道府県4文字 + 市区郡町村12文字 + 町・番地16文字（合計32文字以内）
+ */
+function _b2ParseShipAddr(shipAddr) {
+  if (!shipAddr) return { zip: '', addr: '' };
+  // 〒000-0000 形式の郵便番号を分離
+  const zipM = shipAddr.match(/〒?(\d{3})-?(\d{4})/);
+  const zip  = zipM ? zipM[1] + '-' + zipM[2] : '';
+  // 郵便番号部分を削除した残り
+  const rest = shipAddr.replace(/〒?\d{3}-?\d{4}[\s　]*/, '').trim();
+  return { zip, addr: rest };
+}
+
+/**
+ * B2クラウド形式のCSVを生成（95列固定フォーマット）
+ * @param {Array} ordersList - [注文オブジェクト]
+ * @returns {string} CSVテキスト（BOM付きで返すのは呼び出し側）
+ */
+function _buildB2Csv(ordersList) {
+  // B2クラウド固定95列のヘッダー（テンプレート通りだが実運用では列名行は不要・値のみ取り込みが普通）
+  // ※B2クラウドの取込機能はヘッダー行なしを前提とするため、データ行のみ出力する
+  const rows = [];
+
+  // 発送管理タブで指定された個口数を使用
+  // b2PkgCounts: { 注文番号: 個口数 } の想定。指定なしはデフォルト1
+  ordersList.forEach(o => {
+    const parsed = _b2ParseShipAddr(o.shipAddress || '');
+    const itemNames = (o.items || []).map(i => i.name + '×' + i.qty).join('、').slice(0, 50);
+    const pkgCount = Math.max(1, Number((typeof b2PkgCounts !== 'undefined' && b2PkgCounts[o.orderNo]) || 1));
+
+    // 出荷予定日（当日）
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const shipDate = now.getFullYear() + '/' + pad(now.getMonth()+1) + '/' + pad(now.getDate());
+
+    const s = b2Settings || {};
+    const senderZip = (s.senderZip || '').replace(/^〒/, '');
+
+    // 95列のデータ配列（1-indexed説明のコメント付き）
+    const row = new Array(95).fill('');
+    row[0]  = o.orderNo;                           // 1: お客様管理番号
+    row[1]  = '0';                                 // 2: 送り状種類（0=発払い固定）
+    row[2]  = '';                                  // 3: クール区分
+    row[3]  = '';                                  // 4: 伝票番号（B2側付与）
+    row[4]  = shipDate;                            // 5: 出荷予定日
+    row[5]  = '';                                  // 6: お届け予定日
+    row[6]  = '';                                  // 7: 配達時間帯
+    row[7]  = '';                                  // 8: お届け先コード
+    row[8]  = (o.shipPhone || '').replace(/^'/,'');// 9: お届け先電話番号
+    row[9]  = '';                                  // 10: お届け先電話番号枝番
+    row[10] = parsed.zip;                          // 11: お届け先郵便番号
+    row[11] = parsed.addr.slice(0, 32);            // 12: お届け先住所
+    row[12] = (o.shipBuilding || '').slice(0, 32); // 13: お届け先アパートマンション名
+    row[13] = '';                                  // 14: お届け先会社・部門1
+    row[14] = '';                                  // 15: お届け先会社・部門2
+    row[15] = (o.shipName || '').slice(0, 32);     // 16: お届け先名
+    row[16] = '';                                  // 17: お届け先名(カナ)
+    row[17] = '様';                                 // 18: 敬称
+    row[18] = '';                                  // 19: ご依頼主コード
+    row[19] = (s.senderPhone || '').replace(/^'/,'');// 20: ご依頼主電話番号
+    row[20] = '';                                  // 21: ご依頼主電話番号枝番
+    row[21] = senderZip;                           // 22: ご依頼主郵便番号
+    row[22] = (s.senderAddress || '').slice(0,64); // 23: ご依頼主住所
+    row[23] = (s.senderBuilding || '').slice(0,32);// 24: ご依頼主アパートマンション
+    row[24] = (s.senderName || '').slice(0, 32);   // 25: ご依頼主名
+    row[25] = s.senderNameKana || '';              // 26: ご依頼主名(カナ)
+    row[26] = '';                                  // 27: 品名コード1
+    row[27] = itemNames || 'TCG商品';              // 28: 品名1
+    row[28] = '';                                  // 29: 品名コード2
+    row[29] = '';                                  // 30: 品名2
+    row[30] = '';                                  // 31: 荷扱い1
+    row[31] = '';                                  // 32: 荷扱い2
+    row[32] = '';                                  // 33: 記事
+    row[33] = '';                                  // 34: コレクト代金引換額
+    row[34] = '';                                  // 35: 内消費税額等
+    row[35] = '0';                                 // 36: 止置き（0=利用しない）
+    row[36] = '';                                  // 37: 営業所コード
+    row[37] = String(pkgCount);                    // 38: 発行枚数（個口数）
+    row[38] = '1';                                 // 39: 個数口表示フラグ（1=印字）
+    row[39] = s.billingCode || '';                 // 40: 請求先顧客コード
+    row[40] = '';                                  // 41: 請求先分類コード
+    row[41] = s.freightMgmtNo || '';               // 42: 運賃管理番号
+    row[42] = '0';                                 // 43: クロネコwebコレクトデータ登録
+    // 44-54: クロネコwebコレクト関連 → 空
+    row[47] = '0';                                 // 48: お届け予定eメール利用区分
+    row[51] = '0';                                 // 52: お届け完了eメール利用区分
+    row[54] = '0';                                 // 55: クロネコ収納代行利用区分
+    // 56-73: 収納代行関連 → 空
+    // 74: 複数口くくりキー → 空（出荷予定個数>=2 なら自動でB2補完）
+    // 75-84: 検索キー → 空
+    // 85-86: 予備
+    row[86] = '0';                                 // 87: 投函予定メール利用区分
+    row[89] = '0';                                 // 90: 投函完了メール（お届け先宛）利用区分
+    row[92] = '0';                                 // 93: 投函完了メール（ご依頼主宛）利用区分
+
+    rows.push(row);
+  });
+
+  // CSV文字列化（各セル: カンマ・改行・ダブルクォート含みは "" エスケープ）
+  return rows.map(row =>
+    row.map(v => {
+      const s = String(v == null ? '' : v);
+      if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }).join(',')
+  ).join('\r\n');
+}
+
+/**
+ * CSVをShift_JISでダウンロードさせる
+ * B2クラウドはShift_JISを要求するため必須
+ */
+function _downloadCsvShiftJis(csvText, filename) {
+  // ブラウザ標準ではShift_JIS変換は直接サポートされないため、
+  // encoding.js等が無い場合はBOM付きUTF-8で出力してB2クラウド側の「UTF-8取込」を使う
+  // B2クラウドは取込時にShift_JIS/UTF-8を自動判定するケースが多いが、
+  // もし取込失敗する場合はユーザー側で文字コード変換が必要
+  const bom  = new Uint8Array([0xEF, 0xBB, 0xBF]);
+  const blob = new Blob([bom, csvText], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * 選択された注文をまとめてB2クラウド用CSVにエクスポート（一括）
+ */
 async function downloadB2Csv() {
   const selected = b2Orders.filter(o => b2Selection.has(o.orderNo));
   if (selected.length === 0) { showToast('注文が選択されていません', true); return; }
 
-  const headers = ['お客様管理番号','お届け先電話番号','お届け先郵便番号','お届け先住所','お届け先建物名','お届け先氏名','品名'];
-  const rows = [headers];
+  // B2設定未取得なら取得
+  if (!b2Settings) await loadB2Settings();
+  if (!b2Settings || !b2Settings.billingCode || !b2Settings.freightMgmtNo) {
+    if (!confirm('B2クラウド設定（請求先顧客コード／運賃管理番号）が未設定です。\n空欄のままCSVを出力しますが、B2クラウドでの取込時にエラーになる可能性があります。\n続行しますか？\n\n※管理画面→設定→B2クラウド設定 で登録できます')) return;
+  }
 
-  selected.forEach(o => {
-    const parsed = _parseAddress(o.shipAddress || '');
-    const itemNames = (o.items || []).map(i => i.name + '×' + i.qty).join('、');
-    rows.push([
-      o.orderNo,  // お客様管理番号（B2側の列と一致させて、取込時のマッチングに使う）
-      o.shipPhone || '',
-      parsed.zip,
-      parsed.address,
-      o.shipBuilding || '',
-      (o.shipName || '') + ' 様',
-      itemNames
-    ]);
-  });
-
-  const csvText = rows.map(row =>
-    row.map(v => {
-      const s = String(v || '');
-      if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-      return s;
-    }).join(',')
-  ).join('\r\n');
-
-  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-  const blob = new Blob([bom, csvText], { type: 'text/csv;charset=utf-8' });
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const csvText = _buildB2Csv(selected);
   const now = new Date();
   const pad = n => String(n).padStart(2,'0');
   const fname = 'B2取込_' + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) +
     '_' + pad(now.getHours()) + pad(now.getMinutes()) + '.csv';
-  a.href = url;
-  a.download = fname;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 
+  _downloadCsvShiftJis(csvText, fname);
   showToast(selected.length + '件のB2取込用CSVをダウンロードしました');
+}
+
+/**
+ * 単一注文をB2クラウド用CSVにエクスポート（個別）
+ * @param {string} orderNo
+ */
+async function downloadB2CsvSingle(orderNo) {
+  const o = b2Orders.find(x => x.orderNo === orderNo);
+  if (!o) { showToast('注文が見つかりません', true); return; }
+
+  if (!b2Settings) await loadB2Settings();
+  if (!b2Settings || !b2Settings.billingCode || !b2Settings.freightMgmtNo) {
+    if (!confirm('B2クラウド設定（請求先顧客コード／運賃管理番号）が未設定です。\n空欄のままCSVを出力しますが、B2クラウドでの取込時にエラーになる可能性があります。\n続行しますか？\n\n※管理画面→設定→B2クラウド設定 で登録できます')) return;
+  }
+
+  const csvText = _buildB2Csv([o]);
+  const fname = 'B2取込_' + orderNo + '.csv';
+
+  _downloadCsvShiftJis(csvText, fname);
+  showToast(orderNo + 'のB2取込用CSVをダウンロードしました');
 }
 
 /**
