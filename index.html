@@ -2936,11 +2936,12 @@ async function saveB2Settings() {
  */
 function _b2ParseShipAddr(shipAddr) {
   if (!shipAddr) return { zip: '', addr: '' };
+  const src = String(shipAddr); // Boolean/数値などが渡されても安全化
   // 〒000-0000 形式の郵便番号を分離
-  const zipM = shipAddr.match(/〒?(\d{3})-?(\d{4})/);
+  const zipM = src.match(/〒?(\d{3})-?(\d{4})/);
   const zip  = zipM ? zipM[1] + '-' + zipM[2] : '';
   // 郵便番号部分を削除した残り
-  const rest = shipAddr.replace(/〒?\d{3}-?\d{4}[\s　]*/, '').trim();
+  const rest = src.replace(/〒?\d{3}-?\d{4}[\s　]*/, '').trim();
   return { zip, addr: rest };
 }
 
@@ -2956,9 +2957,18 @@ function _buildB2Csv(ordersList) {
 
   // 発送管理タブで指定された個口数を使用
   // b2PkgCounts: { 注文番号: 個口数 } の想定。指定なしはデフォルト1
+  // 全ての値を安全に文字列化するヘルパー（Boolean/数値/null混入対策）
+  const _s = (v) => {
+    if (v === null || v === undefined) return '';
+    if (v === true)  return '';  // B2クラウドはBoolean不可、空欄扱い
+    if (v === false) return '';
+    return String(v).trim();
+  };
+  const _sl = (v, len) => _s(v).slice(0, len); // 文字列化 + 長さ制限
+
   ordersList.forEach(o => {
-    const parsed = _b2ParseShipAddr(o.shipAddress || '');
-    const itemNames = (o.items || []).map(i => i.name + '×' + i.qty).join('、').slice(0, 50);
+    const parsed = _b2ParseShipAddr(_s(o.shipAddress));
+    const itemNames = _sl((o.items || []).map(i => _s(i.name) + '×' + _s(i.qty)).join('、'), 50);
     const pkgCount = Math.max(1, Number((typeof b2PkgCounts !== 'undefined' && b2PkgCounts[o.orderNo]) || 1));
 
     // 出荷予定日（当日）
@@ -2967,11 +2977,11 @@ function _buildB2Csv(ordersList) {
     const shipDate = now.getFullYear() + '/' + pad(now.getMonth()+1) + '/' + pad(now.getDate());
 
     const s = b2Settings || {};
-    const senderZip = (s.senderZip || '').replace(/^〒/, '');
+    const senderZip = _s(s.senderZip).replace(/^〒/, '');
 
     // 95列のデータ配列（1-indexed説明のコメント付き）
     const row = new Array(95).fill('');
-    row[0]  = o.orderNo;                           // 1: お客様管理番号
+    row[0]  = _s(o.orderNo);                       // 1: お客様管理番号
     row[1]  = '0';                                 // 2: 送り状種類（0=発払い固定）
     row[2]  = '';                                  // 3: クール区分
     row[3]  = '';                                  // 4: 伝票番号（B2側付与）
@@ -2979,24 +2989,24 @@ function _buildB2Csv(ordersList) {
     row[5]  = '';                                  // 6: お届け予定日
     row[6]  = '';                                  // 7: 配達時間帯
     row[7]  = '';                                  // 8: お届け先コード
-    row[8]  = (o.shipPhone || '').replace(/^'/,'');// 9: お届け先電話番号
+    row[8]  = _s(o.shipPhone).replace(/^'/,'');    // 9: お届け先電話番号
     row[9]  = '';                                  // 10: お届け先電話番号枝番
-    row[10] = parsed.zip;                          // 11: お届け先郵便番号
-    row[11] = parsed.addr.slice(0, 32);            // 12: お届け先住所
-    row[12] = (o.shipBuilding || '').slice(0, 32); // 13: お届け先アパートマンション名
+    row[10] = _s(parsed.zip);                      // 11: お届け先郵便番号
+    row[11] = _sl(parsed.addr, 32);                // 12: お届け先住所
+    row[12] = _sl(o.shipBuilding, 32);             // 13: お届け先アパートマンション名
     row[13] = '';                                  // 14: お届け先会社・部門1
     row[14] = '';                                  // 15: お届け先会社・部門2
-    row[15] = (o.shipName || '').slice(0, 32);     // 16: お届け先名
+    row[15] = _sl(o.shipName, 32);                 // 16: お届け先名
     row[16] = '';                                  // 17: お届け先名(カナ)
     row[17] = '様';                                 // 18: 敬称
     row[18] = '';                                  // 19: ご依頼主コード
-    row[19] = (s.senderPhone || '').replace(/^'/,'');// 20: ご依頼主電話番号
+    row[19] = _s(s.senderPhone).replace(/^'/,'');  // 20: ご依頼主電話番号
     row[20] = '';                                  // 21: ご依頼主電話番号枝番
     row[21] = senderZip;                           // 22: ご依頼主郵便番号
-    row[22] = (s.senderAddress || '').slice(0,64); // 23: ご依頼主住所
-    row[23] = (s.senderBuilding || '').slice(0,32);// 24: ご依頼主アパートマンション
-    row[24] = (s.senderName || '').slice(0, 32);   // 25: ご依頼主名
-    row[25] = s.senderNameKana || '';              // 26: ご依頼主名(カナ)
+    row[22] = _sl(s.senderAddress, 64);            // 23: ご依頼主住所
+    row[23] = _sl(s.senderBuilding, 32);           // 24: ご依頼主アパートマンション
+    row[24] = _sl(s.senderName, 32);               // 25: ご依頼主名
+    row[25] = _s(s.senderNameKana);                // 26: ご依頼主名(カナ)
     row[26] = '';                                  // 27: 品名コード1
     row[27] = itemNames || 'TCG商品';              // 28: 品名1
     row[28] = '';                                  // 29: 品名コード2
@@ -3061,23 +3071,29 @@ function _downloadCsvShiftJis(csvText, filename) {
  * 選択された注文をまとめてB2クラウド用CSVにエクスポート（一括）
  */
 async function downloadB2Csv() {
-  const selected = b2Orders.filter(o => b2Selection.has(o.orderNo));
-  if (selected.length === 0) { showToast('注文が選択されていません', true); return; }
+  try {
+    const selected = b2Orders.filter(o => b2Selection.has(o.orderNo));
+    if (selected.length === 0) { showToast('注文が選択されていません', true); return; }
 
-  // B2設定未取得なら取得
-  if (!b2Settings) await loadB2Settings();
-  if (!b2Settings || !b2Settings.billingCode || !b2Settings.freightMgmtNo) {
-    if (!confirm('B2クラウド設定（請求先顧客コード／運賃管理番号）が未設定です。\n空欄のままCSVを出力しますが、B2クラウドでの取込時にエラーになる可能性があります。\n続行しますか？\n\n※管理画面→設定→B2クラウド設定 で登録できます')) return;
+    // B2設定未取得なら取得
+    if (!b2Settings) await loadB2Settings();
+    if (!b2Settings || !b2Settings.billingCode || !b2Settings.freightMgmtNo) {
+      if (!confirm('B2クラウド設定（請求先顧客コード／運賃管理番号）が未設定です。\n空欄のままCSVを出力しますが、B2クラウドでの取込時にエラーになる可能性があります。\n続行しますか？\n\n※管理画面→設定→B2クラウド設定 で登録できます')) return;
+    }
+
+    const csvText = _buildB2Csv(selected);
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const fname = 'B2取込_' + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) +
+      '_' + pad(now.getHours()) + pad(now.getMinutes()) + '.csv';
+
+    _downloadCsvShiftJis(csvText, fname);
+    showToast(selected.length + '件のB2取込用CSVをダウンロードしました');
+  } catch(e) {
+    console.error('B2 CSV生成エラー:', e);
+    showToast('CSV生成失敗: ' + e.message, true);
+    alert('B2 CSV生成でエラーが発生しました:\n\n' + e.message + '\n\n' + (e.stack || ''));
   }
-
-  const csvText = _buildB2Csv(selected);
-  const now = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const fname = 'B2取込_' + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) +
-    '_' + pad(now.getHours()) + pad(now.getMinutes()) + '.csv';
-
-  _downloadCsvShiftJis(csvText, fname);
-  showToast(selected.length + '件のB2取込用CSVをダウンロードしました');
 }
 
 /**
@@ -3085,19 +3101,25 @@ async function downloadB2Csv() {
  * @param {string} orderNo
  */
 async function downloadB2CsvSingle(orderNo) {
-  const o = b2Orders.find(x => x.orderNo === orderNo);
-  if (!o) { showToast('注文が見つかりません', true); return; }
+  try {
+    const o = b2Orders.find(x => x.orderNo === orderNo);
+    if (!o) { showToast('注文が見つかりません', true); return; }
 
-  if (!b2Settings) await loadB2Settings();
-  if (!b2Settings || !b2Settings.billingCode || !b2Settings.freightMgmtNo) {
-    if (!confirm('B2クラウド設定（請求先顧客コード／運賃管理番号）が未設定です。\n空欄のままCSVを出力しますが、B2クラウドでの取込時にエラーになる可能性があります。\n続行しますか？\n\n※管理画面→設定→B2クラウド設定 で登録できます')) return;
+    if (!b2Settings) await loadB2Settings();
+    if (!b2Settings || !b2Settings.billingCode || !b2Settings.freightMgmtNo) {
+      if (!confirm('B2クラウド設定（請求先顧客コード／運賃管理番号）が未設定です。\n空欄のままCSVを出力しますが、B2クラウドでの取込時にエラーになる可能性があります。\n続行しますか？\n\n※管理画面→設定→B2クラウド設定 で登録できます')) return;
+    }
+
+    const csvText = _buildB2Csv([o]);
+    const fname = 'B2取込_' + orderNo + '.csv';
+
+    _downloadCsvShiftJis(csvText, fname);
+    showToast(orderNo + 'のB2取込用CSVをダウンロードしました');
+  } catch(e) {
+    console.error('B2 CSV生成エラー:', e);
+    showToast('CSV生成失敗: ' + e.message, true);
+    alert('B2 CSV生成でエラーが発生しました:\n\n' + e.message + '\n\n' + (e.stack || ''));
   }
-
-  const csvText = _buildB2Csv([o]);
-  const fname = 'B2取込_' + orderNo + '.csv';
-
-  _downloadCsvShiftJis(csvText, fname);
-  showToast(orderNo + 'のB2取込用CSVをダウンロードしました');
 }
 
 /**
